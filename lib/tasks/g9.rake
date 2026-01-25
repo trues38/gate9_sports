@@ -996,12 +996,13 @@ namespace :g9 do
         next unless player_name
 
         # Injury 노드 생성 + Team 연결
-        client.query(<<~CYPHER, {
+        params = {
           player: player_name,
           team_abbr: team_abbr.to_s,
           status: status,
           details: details
-        })
+        }
+        cypher = <<~CYPHER
           MERGE (i:Injury {
             player_name: $player,
             team_abbr: $team_abbr,
@@ -1014,7 +1015,7 @@ namespace :g9 do
           MATCH (t:Team {abbr: $team_abbr})
           MERGE (i)-[:AFFECTS_TEAM]->(t)
         CYPHER
-
+        client.query(cypher, params)
         created += 1
       end
     end
