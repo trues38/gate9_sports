@@ -1,5 +1,5 @@
 [Unit]
-Description=Gate9 Lines/Results Sync (SQLite → Neo4j)
+Description=Gate9 Full Neo4j Sync (Lines + Injuries + Relations)
 After=network.target docker.service g9-data-collect.service
 Requires=docker.service
 
@@ -8,18 +8,24 @@ Type=oneshot
 User=root
 WorkingDirectory=/root
 
-# 1. SQLite → Neo4j 라인 동기화
+# 1. Injuries 동기화 (tmp/injuries.json → Neo4j)
+ExecStart=/usr/bin/docker exec gate9_sports-web bin/rails g9:sync_injuries
+
+# 2. Game 관계 복구 (고아 노드 연결)
+ExecStart=/usr/bin/docker exec gate9_sports-web bin/rails g9:sync_game_relations
+
+# 3. SQLite → Neo4j 라인 동기화
 ExecStart=/usr/bin/docker exec gate9_sports-web bin/rails g9:sync_lines
 
-# 2. ATS/O-U 통계 업데이트
+# 4. ATS/O-U 통계 업데이트
 ExecStart=/usr/bin/docker exec gate9_sports-web bin/rails g9:sync_ats
 
-# 3. TeamRegime flow_state 업데이트
+# 5. TeamRegime flow_state 업데이트
 ExecStart=/usr/bin/docker exec gate9_sports-web bin/rails g9:update_regime
 
 StandardOutput=journal
 StandardError=journal
-TimeoutStartSec=300
+TimeoutStartSec=600
 
 [Install]
 WantedBy=multi-user.target

@@ -965,4 +965,172 @@ namespace :g9 do
     puts "\n[6/6] Complete!"
     puts "=" * 60
   end
+
+  desc "Sync Injuries from tmp/injuries.json to Neo4j"
+  task sync_injuries: :environment do
+    puts "🚑 Syncing Injuries to Neo4j..."
+
+    injuries_path = Rails.root.join("tmp", "injuries.json")
+
+    unless File.exist?(injuries_path)
+      puts "⚠️ tmp/injuries.json not found. Run nba:fetch_injuries first."
+      exit 0
+    end
+
+    injuries_data = JSON.parse(File.read(injuries_path))
+    client = Neo4jClient.new
+
+    # 기존 Injury 노드 삭제 (최신 데이터로 교체)
+    client.query("MATCH (i:Injury) DETACH DELETE i")
+    puts "  Cleared old Injury nodes"
+
+    created = 0
+    injuries_data.each do |team_abbr, injuries|
+      next if injuries.nil? || injuries.empty?
+
+      injuries.each do |inj|
+        player_name = inj["player"] || inj[:player]
+        status = inj["status"] || inj[:status] || "Unknown"
+        details = inj["details"] || inj[:details] || ""
+
+        next unless player_name
+
+        # Injury 노드 생성 + Team 연결
+        client.query(<<~CYPHER, {
+          player: player_name,
+          team_abbr: team_abbr.to_s,
+          status: status,
+          details: details
+        })
+          MERGE (i:Injury {
+            player_name: $player,
+            team_abbr: $team_abbr,
+            status: $status
+          })
+          ON CREATE SET
+            i.details = $details,
+            i.created_at = datetime()
+          WITH i
+          MATCH (t:Team {abbr: $team_abbr})
+          MERGE (i)-[:AFFECTS_TEAM]->(t)
+        CYPHER
+
+        created += 1
+      end
+    end
+
+    puts "✅ Created #{created} Injury nodes"
+
+    # 팀별 부상자 수 요약
+    summary = client.query(<<~CYPHER)
+      MATCH (i:Injury)-[:AFFECTS_TEAM]->(t:Team)
+      RETURN t.abbr AS team, count(i) AS injury_count
+      ORDER BY injury_count DESC
+      LIMIT 10
+    CYPHER
+
+    puts "\n| Team | Injuries |"
+    puts "|------|----------|"
+    summary.each do |r|
+      puts "| #{r['team']} | #{r['injury_count']} |"
+    end
+  end
+
+  desc "Sync Game relations (HOME_TEAM/AWAY_TEAM) for orphan Game nodes"
+  task sync_game_relations: :environment do
+    puts "🔗 Syncing Game relations..."
+
+    client = Neo4jClient.new
+
+    # 고아 Game 노드에 HOME_TEAM 관계 추가
+    home_result = client.query(<<~CYPHER)
+      MATCH (g:Game)
+      WHERE NOT (g)-[:HOME_TEAM]->()
+      MATCH (t:Team {abbr: g.home_team})
+      MERGE (g)-[:HOME_TEAM]->(t)
+      RETURN count(g) AS created
+    CYPHER
+
+    home_created = home_result.first&.dig('created') || 0
+    home_created = home_created.is_a?(Hash) ? home_created['low'] : home_created.to_i
+    puts "  HOME_TEAM relations: #{home_created} created"
+
+    # 고아 Game 노드에 AWAY_TEAM 관계 추가
+    away_result = client.query(<<~CYPHER)
+      MATCH (g:Game)
+      WHERE NOT (g)-[:AWAY_TEAM]->()
+      MATCH (t:Team {abbr: g.away_team})
+      MERGE (g)-[:AWAY_TEAM]->(t)
+      RETURN count(g) AS created
+    CYPHER
+
+    away_created = away_result.first&.dig('created') || 0
+    away_created = away_created.is_a?(Hash) ? away_created['low'] : away_created.to_i
+    puts "  AWAY_TEAM relations: #{away_created} created"
+
+    # GameResult에도 관계 추가 (display_name 매칭)
+    gr_home_result = client.query(<<~CYPHER)
+      MATCH (gr:GameResult)
+      WHERE NOT (gr)-[:HOME_TEAM]->() AND gr.home_team IS NOT NULL
+      MATCH (t:Team {display_name: gr.home_team})
+      MERGE (gr)-[:HOME_TEAM]->(t)
+      RETURN count(gr) AS created
+    CYPHER
+
+    gr_home = gr_home_result.first&.dig('created') || 0
+    gr_home = gr_home.is_a?(Hash) ? gr_home['low'] : gr_home.to_i
+
+    gr_away_result = client.query(<<~CYPHER)
+      MATCH (gr:GameResult)
+      WHERE NOT (gr)-[:AWAY_TEAM]->() AND gr.away_team IS NOT NULL
+      MATCH (t:Team {display_name: gr.away_team})
+      MERGE (gr)-[:AWAY_TEAM]->(t)
+      RETURN count(gr) AS created
+    CYPHER
+
+    gr_away = gr_away_result.first&.dig('created') || 0
+    gr_away = gr_away.is_a?(Hash) ? gr_away['low'] : gr_away.to_i
+
+    puts "  GameResult HOME_TEAM: #{gr_home} created"
+    puts "  GameResult AWAY_TEAM: #{gr_away} created"
+
+    # 최종 통계
+    stats = client.query(<<~CYPHER)
+      MATCH (n)
+      WHERE NOT (n)--()
+      RETURN labels(n)[0] AS label, count(*) AS orphan_count
+      ORDER BY orphan_count DESC
+    CYPHER
+
+    if stats.any?
+      puts "\n⚠️ Remaining orphan nodes:"
+      stats.each { |r| puts "  #{r['label']}: #{r['orphan_count']}" }
+    else
+      puts "\n✅ No orphan nodes remaining!"
+    end
+  end
+
+  desc "Full sync cycle: injuries + game relations + stats"
+  task sync_all: :environment do
+    puts "🔄 G9 Full Sync Cycle"
+    puts "=" * 60
+
+    puts "\n[1/5] Syncing Injuries..."
+    Rake::Task["g9:sync_injuries"].invoke
+
+    puts "\n[2/5] Syncing Game relations..."
+    Rake::Task["g9:sync_game_relations"].invoke
+
+    puts "\n[3/5] Syncing Team stats..."
+    Rake::Task["g9:sync_stats"].invoke
+
+    puts "\n[4/5] Syncing ATS stats..."
+    Rake::Task["g9:sync_ats"].invoke
+
+    puts "\n[5/5] Updating TeamRegime..."
+    Rake::Task["g9:update_regime"].invoke
+
+    puts "\n✅ Full sync complete!"
+    puts "=" * 60
+  end
 end
