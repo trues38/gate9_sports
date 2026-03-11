@@ -1,426 +1,392 @@
-<div class="px-4 py-4 max-w-4xl mx-auto">
-  <!-- Back Button -->
-  <%= link_to reports_path(sport: current_sport&.slug), class: "inline-flex items-center text-gray-400 light:text-gray-600 hover:text-white light:hover:text-gray-900 mb-4" do %>
-    <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
-    Back to Reports
-  <% end %>
+<style>
+  .premium-blur-wrap {
+    position: relative;
+    max-height: 220px;
+    overflow: hidden;
+  }
+  .premium-blur-wrap::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 160px;
+    background: linear-gradient(to bottom, transparent, rgba(2, 6, 23, 0.97));
+    pointer-events: none;
+  }
+  .dark .premium-blur-wrap::after {
+    background: linear-gradient(to bottom, transparent, rgba(2, 6, 23, 0.97));
+  }
+  html:not(.dark) .premium-blur-wrap::after {
+    background: linear-gradient(to bottom, transparent, rgba(248, 250, 252, 0.97));
+  }
+</style>
 
-  <% if @report.structured_data.present? %>
-    <!-- Structured Report View -->
-    <% data = @report.structured_data.with_indifferent_access %>
+<div class="max-w-4xl mx-auto space-y-10 pb-24 animate-fade-in">
 
-    <!-- Hero Section: TL;DR -->
-    <div class="bg-gray-800 light:bg-white rounded-2xl p-6 border border-gray-700 light:border-gray-200 light:shadow-sm mb-6">
-      <!-- Game Info -->
-      <div class="flex justify-between items-start mb-4">
-        <div>
-          <div class="text-sm text-gray-400 light:text-gray-500"><%= @report.game&.game_date&.strftime("%m/%d %H:%M") %> KST</div>
-          <div class="text-3xl font-bold mt-1 light:text-gray-900"><%= @report.game&.away_abbr %> @ <%= @report.game&.home_abbr %></div>
-        </div>
-        <% if data.dig(:verdict, :consensus) %>
-          <div class="text-right">
-            <div class="text-xs text-gray-400 light:text-gray-500">CONSENSUS</div>
-            <div class="text-2xl font-bold text-indigo-400 light:text-indigo-600"><%= data.dig(:verdict, :consensus) %></div>
-          </div>
-        <% end %>
-      </div>
+  <!-- Breadcrumb & Actions -->
+  <div class="flex items-center justify-between px-2">
+    <%= link_to root_path(sport: current_sport&.slug), class: "inline-flex items-center gap-2 text-slate-500 hover:text-primary transition-all font-bold" do %>
+      <iconify-icon icon="solar:alt-arrow-left-bold" width="18"></iconify-icon>
+      <span class="text-[11px] font-black uppercase tracking-widest">Back to Dashboard</span>
+    <% end %>
 
-      <!-- Main Pick Card -->
-      <div class="bg-gradient-to-r <%= confidence_gradient(data.dig(:verdict, :confidence) || 3) %> rounded-xl p-5 mb-4">
-        <div class="flex justify-between items-center">
-          <div>
-            <div class="text-sm opacity-80 mb-1">TODAY'S PICK</div>
-            <div class="text-3xl font-black"><%= data.dig(:verdict, :pick) || @report.pick %></div>
-          </div>
-          <div class="text-right">
-            <div class="text-3xl"><%= '★' * (data.dig(:verdict, :confidence) || 3) %><%= '☆' * (5 - (data.dig(:verdict, :confidence) || 3)) %></div>
-            <div class="text-sm opacity-80"><%= data.dig(:verdict, :stake) %>u</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Quick Summary -->
-      <% if data[:tldr] %>
-        <p class="text-gray-300 light:text-gray-700 leading-relaxed"><%= data[:tldr] %></p>
+    <div class="flex gap-3">
+      <% if @report.free? %>
+        <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-[10px] font-black uppercase tracking-widest">
+          <iconify-icon icon="solar:lock-unlocked-bold-duotone" width="14"></iconify-icon>
+          무료 리포트
+        </span>
+      <% else %>
+        <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600/10 border border-indigo-500/30 text-indigo-400 text-[10px] font-black uppercase tracking-widest">
+          <iconify-icon icon="solar:lock-bold-duotone" width="14"></iconify-icon>
+          프리미엄
+        </span>
       <% end %>
+      <button class="p-2.5 rounded-lg border border-[var(--border-subtle)] hover:bg-white/10 transition text-slate-500">
+        <iconify-icon icon="solar:share-bold" width="18"></iconify-icon>
+      </button>
+    </div>
+  </div>
 
-      <!-- Line Info Pills -->
-      <div class="flex gap-3 mt-4">
-        <div class="bg-gray-700/50 light:bg-gray-100 rounded-lg px-4 py-2">
-          <div class="text-xs text-gray-400 light:text-gray-500">SPREAD</div>
-          <div class="font-bold light:text-gray-900"><%= @report.game&.home_abbr %> <%= @report.game&.home_spread %></div>
+  <!-- Hero Analysis Section -->
+  <div class="card-clean p-10 bg-gradient-to-br from-indigo-600/[0.03] to-transparent">
+    <div class="flex flex-col md:flex-row md:items-start justify-between gap-8 mb-10">
+      <div class="space-y-4 flex-1">
+        <div class="flex items-center gap-3">
+          <% if @report.free? %>
+            <span class="px-2 py-0.5 rounded bg-emerald-600 text-white text-[9px] font-black uppercase tracking-widest">무료 공개</span>
+          <% else %>
+            <span class="px-2 py-0.5 rounded bg-indigo-600 text-white text-[9px] font-black uppercase tracking-widest">Premium Intelligence</span>
+          <% end %>
+          <span class="text-[10px] font-bold text-slate-400 tabular-nums uppercase">Published: <%= @report.published_at&.strftime("%b %d, %Y | %H:%M") %></span>
         </div>
-        <div class="bg-gray-700/50 light:bg-gray-100 rounded-lg px-4 py-2">
-          <div class="text-xs text-gray-400 light:text-gray-500">TOTAL</div>
-          <div class="font-bold light:text-gray-900">O/U <%= @report.game&.total_line %></div>
+        <h1 class="text-5xl font-extrabold text-[var(--text-main)] tracking-tighter leading-tight">
+          <%= @report.game&.away_abbr %> @ <%= @report.game&.home_abbr %>
+        </h1>
+        <p class="text-xl font-medium text-slate-500 max-w-2xl leading-relaxed italic">
+          <%= @report.title %>
+        </p>
+      </div>
+
+      <!-- Quick Stats Stack -->
+      <div class="flex flex-col gap-3 min-w-[180px]">
+        <div class="card-clean p-4 border-emerald-500/20 bg-emerald-500/[0.02]">
+          <div class="text-[9px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest mb-1 text-center">Recorded Win Rate</div>
+          <div class="text-3xl font-mono font-black text-[var(--text-main)] text-center"><%= number_with_precision(@sport_performance[:win_rate], precision: 1) %>%</div>
         </div>
-        <% if @report.game&.home_edge.present? || @report.game&.away_edge.present? %>
-          <div class="bg-yellow-600/20 light:bg-amber-100 border border-yellow-600/30 light:border-gray-200 rounded-lg px-4 py-2">
-            <div class="text-xs text-yellow-400 light:text-amber-600">EDGE</div>
-            <div class="font-bold text-yellow-300 light:text-amber-600"><%= [@report.game&.home_edge, @report.game&.away_edge].compact.join(' / ') %></div>
+        <div class="card-clean p-4">
+          <div class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1 text-center">Recorded ROI</div>
+          <div class="text-3xl font-mono font-black text-[var(--text-main)] text-center"><%= number_with_precision(@sport_performance[:roi], precision: 1) %>%</div>
+        </div>
+        <% if @report.edge_score.present? %>
+          <% edge = @report.edge_score.to_i
+             edge_color = edge >= 75 ? "text-emerald-400 border-emerald-500/30 bg-emerald-500/[0.04]" :
+                          edge >= 55 ? "text-amber-400 border-amber-500/30 bg-amber-500/[0.04]" :
+                                       "text-rose-400 border-rose-500/30 bg-rose-500/[0.04]" %>
+          <div class="card-clean p-4 <%= edge_color %>">
+            <div class="text-[9px] font-black uppercase tracking-widest mb-1 text-center opacity-70">Edge Score</div>
+            <div class="text-3xl font-mono font-black text-center"><%= edge %></div>
           </div>
         <% end %>
       </div>
     </div>
 
-    <!-- Team Trends Section -->
-    <% trends = matchup_trends(@report.game&.home_abbr, @report.game&.away_abbr) %>
-    <% if trends %>
-      <div class="bg-gray-800 light:bg-white rounded-xl p-5 border border-gray-700 light:border-gray-200 light:shadow-sm mb-4">
-        <h2 class="text-lg font-bold mb-4 flex items-center light:text-gray-900">
-          <span class="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center mr-3">📈</span>
-          팀 트렌드
-        </h2>
-
-        <div class="grid grid-cols-2 gap-4">
-          <!-- Away Team -->
-          <div class="bg-gray-700/30 light:bg-gray-50 rounded-xl p-4">
-            <div class="flex items-center justify-between mb-3">
-              <span class="text-lg font-bold light:text-gray-900"><%= trends[:away][:abbr] %></span>
-              <span class="text-sm text-gray-400 light:text-gray-500">AWAY</span>
-            </div>
-
-            <div class="space-y-2 text-sm">
-              <div class="flex justify-between">
-                <span class="text-gray-400 light:text-gray-500">기록</span>
-                <span class="font-medium light:text-gray-900"><%= trends[:away][:record] %></span>
-              </div>
-              <div class="flex justify-between">
-                <span class="text-gray-400 light:text-gray-500">원정</span>
-                <span class="font-medium light:text-gray-900"><%= trends[:away][:away_record] || 'N/A' %></span>
-              </div>
-              <div class="flex justify-between">
-                <span class="text-gray-400 light:text-gray-500">연속</span>
-                <span class="font-medium <%= trends[:away][:streak]&.start_with?('W') ? 'text-green-400' : 'text-red-400' %>"><%= trends[:away][:streak] %></span>
-              </div>
-              <div class="flex justify-between">
-                <span class="text-gray-400 light:text-gray-500">PPG</span>
-                <span class="font-medium light:text-gray-900">
-                  <%= trends[:away][:ppg] %>
-                  <% if trends[:away][:trend] %>
-                    <span class="<%= trends[:away][:trend] == '↑' ? 'text-green-400' : trends[:away][:trend] == '↓' ? 'text-red-400' : 'text-gray-400' %>"><%= trends[:away][:trend] %></span>
-                  <% end %>
-                </span>
-              </div>
-              <div class="flex justify-between">
-                <span class="text-gray-400 light:text-gray-500">최근 5</span>
-                <span class="font-mono text-xs">
-                  <% trends[:away][:form].chars.each do |r| %>
-                    <span class="<%= r == 'W' ? 'text-green-400' : 'text-red-400' %>"><%= r %></span>
-                  <% end %>
-                </span>
-              </div>
-              <% if trends[:away][:ats].present? && trends[:away][:ats] != 'N/A' %>
-                <div class="flex justify-between">
-                  <span class="text-gray-400 light:text-gray-500">ATS</span>
-                  <span class="font-medium text-blue-400"><%= trends[:away][:ats] %></span>
-                </div>
-              <% end %>
-            </div>
-          </div>
-
-          <!-- Home Team -->
-          <div class="bg-gray-700/30 light:bg-gray-50 rounded-xl p-4">
-            <div class="flex items-center justify-between mb-3">
-              <span class="text-lg font-bold light:text-gray-900"><%= trends[:home][:abbr] %></span>
-              <span class="text-sm text-gray-400 light:text-gray-500">HOME</span>
-            </div>
-
-            <div class="space-y-2 text-sm">
-              <div class="flex justify-between">
-                <span class="text-gray-400 light:text-gray-500">기록</span>
-                <span class="font-medium light:text-gray-900"><%= trends[:home][:record] %></span>
-              </div>
-              <div class="flex justify-between">
-                <span class="text-gray-400 light:text-gray-500">홈</span>
-                <span class="font-medium light:text-gray-900"><%= trends[:home][:home_record] || 'N/A' %></span>
-              </div>
-              <div class="flex justify-between">
-                <span class="text-gray-400 light:text-gray-500">연속</span>
-                <span class="font-medium <%= trends[:home][:streak]&.start_with?('W') ? 'text-green-400' : 'text-red-400' %>"><%= trends[:home][:streak] %></span>
-              </div>
-              <div class="flex justify-between">
-                <span class="text-gray-400 light:text-gray-500">PPG</span>
-                <span class="font-medium light:text-gray-900">
-                  <%= trends[:home][:ppg] %>
-                  <% if trends[:home][:trend] %>
-                    <span class="<%= trends[:home][:trend] == '↑' ? 'text-green-400' : trends[:home][:trend] == '↓' ? 'text-red-400' : 'text-gray-400' %>"><%= trends[:home][:trend] %></span>
-                  <% end %>
-                </span>
-              </div>
-              <div class="flex justify-between">
-                <span class="text-gray-400 light:text-gray-500">최근 5</span>
-                <span class="font-mono text-xs">
-                  <% trends[:home][:form].chars.each do |r| %>
-                    <span class="<%= r == 'W' ? 'text-green-400' : 'text-red-400' %>"><%= r %></span>
-                  <% end %>
-                </span>
-              </div>
-              <% if trends[:home][:ats].present? && trends[:home][:ats] != 'N/A' %>
-                <div class="flex justify-between">
-                  <span class="text-gray-400 light:text-gray-500">ATS</span>
-                  <span class="font-medium text-blue-400"><%= trends[:home][:ats] %></span>
-                </div>
-              <% end %>
-            </div>
-          </div>
-        </div>
-
-        <!-- Trend Comparison Summary -->
-        <div class="mt-4 pt-4 border-t border-gray-700 light:border-gray-200">
-          <div class="grid grid-cols-3 gap-2 text-center text-xs">
-            <div class="bg-gray-700/50 light:bg-gray-100 rounded-lg py-2">
-              <div class="text-gray-400 light:text-gray-500">득점력</div>
-              <div class="font-bold light:text-gray-900">
-                <% away_ppg = trends[:away][:recent_ppg] || trends[:away][:ppg] || 0 %>
-                <% home_ppg = trends[:home][:recent_ppg] || trends[:home][:ppg] || 0 %>
-                <%= away_ppg.to_f > home_ppg.to_f ? "#{trends[:away][:abbr]} ↑" : home_ppg.to_f > away_ppg.to_f ? "#{trends[:home][:abbr]} ↑" : "EVEN" %>
-              </div>
-            </div>
-            <div class="bg-gray-700/50 light:bg-gray-100 rounded-lg py-2">
-              <div class="text-gray-400 light:text-gray-500">모멘텀</div>
-              <div class="font-bold light:text-gray-900">
-                <% away_wins = trends[:away][:form].count('W') rescue 0 %>
-                <% home_wins = trends[:home][:form].count('W') rescue 0 %>
-                <%= away_wins > home_wins ? "#{trends[:away][:abbr]} ↑" : home_wins > away_wins ? "#{trends[:home][:abbr]} ↑" : "EVEN" %>
-              </div>
-            </div>
-            <div class="bg-gray-700/50 light:bg-gray-100 rounded-lg py-2">
-              <div class="text-gray-400 light:text-gray-500">홈/원정</div>
-              <div class="font-bold light:text-gray-900">
-                <%= trends[:home][:abbr] %> 🏠
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    <% end %>
-
-    <!-- Line Analysis Section -->
-    <% if data[:line_analysis] %>
-      <div class="bg-gray-800 light:bg-white rounded-xl p-5 border border-gray-700 light:border-gray-200 light:shadow-sm mb-4">
-        <h2 class="text-lg font-bold mb-4 flex items-center light:text-gray-900">
-          <span class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center mr-3">📊</span>
-          라인 분석
-        </h2>
-
-        <% if data.dig(:line_analysis, :value_gap) %>
-          <div class="bg-blue-600/10 light:bg-indigo-50 border border-blue-600/30 light:border-indigo-200 rounded-lg p-4 mb-4">
-            <div class="flex justify-between items-center">
-              <span class="text-gray-400 light:text-gray-600">예상 라인</span>
-              <span class="font-bold light:text-gray-900"><%= data.dig(:line_analysis, :expected_line) %></span>
-            </div>
-            <div class="flex justify-between items-center mt-2">
-              <span class="text-gray-400 light:text-gray-600">실제 라인</span>
-              <span class="font-bold light:text-gray-900"><%= data.dig(:line_analysis, :actual_line) %></span>
-            </div>
-            <div class="border-t border-gray-600 light:border-gray-200 mt-3 pt-3">
-              <div class="flex justify-between items-center">
-                <span class="text-blue-400 light:text-indigo-600 font-medium">밸류 갭</span>
-                <span class="text-xl font-black text-blue-400 light:text-indigo-600"><%= data.dig(:line_analysis, :value_gap) %></span>
-              </div>
-            </div>
-          </div>
+    <!-- Execution Target (The Pick) — always visible -->
+    <div class="bg-indigo-600 text-white rounded-2xl p-8 flex flex-col md:flex-row items-center justify-between gap-6 shadow-2xl shadow-indigo-600/30">
+      <div class="text-center md:text-left space-y-1">
+        <p class="text-[10px] font-black text-indigo-200 uppercase tracking-[0.3em]">Execution Signal</p>
+        <% if @full_access %>
+          <h2 class="text-4xl font-extrabold tracking-tight uppercase"><%= @report.pick %></h2>
+        <% else %>
+          <h2 class="text-4xl font-extrabold tracking-tight uppercase blur-sm select-none">██████</h2>
+          <p class="text-[10px] text-indigo-300 mt-1">구독 후 확인 가능</p>
         <% end %>
-
-        <p class="text-gray-300 light:text-gray-700"><%= data.dig(:line_analysis, :interpretation) %></p>
       </div>
-    <% end %>
+      <div class="h-12 w-px bg-white/10 hidden md:block"></div>
+      <div class="text-center md:text-right space-y-1">
+        <p class="text-[10px] font-black text-indigo-200 uppercase tracking-[0.3em]">Risk Allocation</p>
+        <% if @full_access %>
+          <h2 class="text-4xl font-mono font-bold tracking-tighter uppercase">1.5 UNITS</h2>
+        <% else %>
+          <h2 class="text-4xl font-mono font-bold tracking-tighter uppercase blur-sm select-none">██ UNITS</h2>
+        <% end %>
+      </div>
+    </div>
+  </div>
 
-    <!-- Edge Scan Section -->
-    <% if data[:edge_scan] %>
-      <div class="bg-gray-800 light:bg-white rounded-xl p-5 border border-gray-700 light:border-gray-200 light:shadow-sm mb-4">
-        <h2 class="text-lg font-bold mb-4 flex items-center light:text-gray-900">
-          <span class="w-8 h-8 bg-green-600 rounded-lg flex items-center justify-center mr-3">🔍</span>
-          엣지 스캔
-        </h2>
+  <!-- Primary Report Body -->
+  <div class="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start px-2">
 
-        <div class="grid grid-cols-2 gap-3">
-          <% (data.dig(:edge_scan, :factors) || []).each do |factor| %>
-            <div class="bg-gray-700/50 light:bg-gray-100 rounded-lg p-3">
-              <div class="flex items-center justify-between">
-                <span class="text-sm text-gray-400 light:text-gray-600"><%= factor[:name] %></span>
-                <span class="<%= factor[:edge] == 'home' ? 'text-green-400' : factor[:edge] == 'away' ? 'text-red-400' : 'text-gray-400' %>">
-                  <%= factor[:edge] == 'home' ? '🏠 HOME' : factor[:edge] == 'away' ? '✈️ AWAY' : '➖' %>
-                </span>
+    <!-- Content Column -->
+    <div class="lg:col-span-8 space-y-8">
+      <div class="flex items-center gap-4">
+        <div class="h-px flex-1 bg-[var(--border-subtle)]"></div>
+        <span class="text-[10px] font-black text-slate-400 uppercase tracking-[0.4em]">Detailed Rationale</span>
+        <div class="h-px flex-1 bg-[var(--border-subtle)]"></div>
+      </div>
+
+      <% if @full_access %>
+        <!-- Full content for subscribers -->
+        <div class="prose prose-slate dark:prose-invert max-w-none
+                    prose-p:text-lg prose-p:leading-relaxed prose-p:text-slate-600 dark:prose-p:text-slate-300
+                    prose-strong:text-indigo-600 dark:prose-strong:text-indigo-400 prose-strong:font-black
+                    prose-headings:font-extrabold prose-headings:tracking-tighter prose-headings:uppercase">
+          <%= render_markdown(@report.content) %>
+        </div>
+      <% else %>
+        <%
+          # Calculate teaser: first ~30% of content by character count
+          full_content = @report.content.to_s
+          teaser_length = [(full_content.length * 0.30).to_i, 300].max
+          # Try to cut at a paragraph boundary to avoid mid-sentence cuts
+          teaser_cut = full_content.index("\n\n", teaser_length) || teaser_length
+          teaser_content = full_content[0, teaser_cut]
+        %>
+
+        <!-- Teaser: first 30% -->
+        <div class="prose prose-slate dark:prose-invert max-w-none
+                    prose-p:text-lg prose-p:leading-relaxed prose-p:text-slate-600 dark:prose-p:text-slate-300
+                    prose-strong:text-indigo-600 dark:prose-strong:text-indigo-400 prose-strong:font-black
+                    prose-headings:font-extrabold prose-headings:tracking-tighter prose-headings:uppercase">
+          <%= render_markdown(teaser_content) %>
+        </div>
+
+        <!-- Blurred remainder (visual fake with placeholder) -->
+        <div class="premium-blur-wrap">
+          <div class="prose prose-slate dark:prose-invert max-w-none opacity-40 pointer-events-none select-none user-select-none
+                      prose-p:text-lg prose-p:leading-relaxed prose-p:text-slate-600 dark:prose-p:text-slate-300
+                      prose-strong:text-indigo-600 dark:prose-strong:text-indigo-400 prose-strong:font-black
+                      prose-headings:font-extrabold prose-headings:tracking-tighter prose-headings:uppercase"
+               style="filter: blur(4px); user-select: none;">
+            <p>이 분석에서는 팀의 최근 폼, 부상자 현황, 매치업 분석을 통해 핵심 엣지를 도출합니다. 정량적 데이터와 정성적 분석을 결합하여 최적의 베팅 포인트를 제시합니다.</p>
+            <p>주요 지표 분석, 라인 무브먼트 해석, 그리고 최종 추천 픽과 유닛 사이즈까지 포함된 프리미엄 분석입니다.</p>
+            <p>상세한 매치업 브레이크다운과 함께 리스크 요소 및 대안 시나리오도 다룹니다.</p>
+          </div>
+        </div>
+
+        <!-- Paywall CTA -->
+        <div class="relative z-10 -mt-4">
+          <div class="rounded-2xl border border-indigo-500/30 bg-gradient-to-br from-indigo-950/80 via-slate-900/90 to-slate-900/80 backdrop-blur-sm p-8 shadow-2xl shadow-indigo-900/30 text-center space-y-6">
+
+            <!-- Lock icon -->
+            <div class="flex justify-center">
+              <div class="w-14 h-14 rounded-2xl bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center">
+                <iconify-icon icon="solar:lock-bold-duotone" class="text-indigo-400 text-3xl"></iconify-icon>
               </div>
-              <% if factor[:detail] %>
-                <div class="text-xs text-gray-500"><%= factor[:detail] %></div>
+            </div>
+
+            <div class="space-y-2">
+              <h3 class="text-xl font-black text-white uppercase tracking-tight">전체 분석 보기</h3>
+              <p class="text-sm text-slate-400 max-w-sm mx-auto leading-relaxed">
+                G9 AI 멀티-에이전트 풀 리포트 — 픽, 배당 분석, AI 3종 종합 의견까지 전부 공개
+              </p>
+            </div>
+
+            <!-- Plan pricing -->
+            <div class="grid grid-cols-3 gap-3 max-w-sm mx-auto">
+              <div class="rounded-xl border border-white/10 bg-white/5 p-3 text-center">
+                <div class="text-[10px] font-black text-slate-400 uppercase mb-1">일간</div>
+                <div class="text-lg font-black text-white font-mono">3,000</div>
+                <div class="text-[9px] text-slate-500">원/일</div>
+              </div>
+              <div class="rounded-xl border border-indigo-500/40 bg-indigo-600/10 p-3 text-center relative">
+                <div class="absolute -top-2 left-1/2 -translate-x-1/2 px-2 py-0.5 bg-indigo-600 rounded text-[8px] font-black text-white uppercase whitespace-nowrap">인기</div>
+                <div class="text-[10px] font-black text-indigo-300 uppercase mb-1">주간</div>
+                <div class="text-lg font-black text-white font-mono">15,000</div>
+                <div class="text-[9px] text-slate-500">원/주</div>
+              </div>
+              <div class="rounded-xl border border-white/10 bg-white/5 p-3 text-center">
+                <div class="text-[10px] font-black text-slate-400 uppercase mb-1">월간</div>
+                <div class="text-lg font-black text-white font-mono">50,000</div>
+                <div class="text-[9px] text-slate-500">원/월</div>
+              </div>
+            </div>
+
+            <!-- CTA buttons -->
+            <div class="flex flex-col sm:flex-row gap-3 justify-center max-w-sm mx-auto w-full">
+              <%= link_to new_subscription_path,
+                    class: "flex-1 py-3.5 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-black uppercase tracking-widest rounded-xl transition-all shadow-lg shadow-indigo-600/30 text-center" do %>
+                <iconify-icon icon="solar:crown-bold-duotone" class="mr-1"></iconify-icon>
+                구독하기
               <% end %>
+              <% unless signed_in? %>
+                <%= link_to sign_in_path,
+                      class: "flex-1 py-3.5 border border-white/10 hover:border-white/20 text-slate-300 hover:text-white text-sm font-bold uppercase tracking-widest rounded-xl transition-all text-center" do %>
+                  로그인
+                <% end %>
+              <% end %>
+            </div>
+
+            <!-- Free reports nudge -->
+            <div class="pt-2 border-t border-white/5">
+              <%= link_to reports_path(sport: current_sport&.slug),
+                    class: "text-[11px] text-slate-500 hover:text-emerald-400 transition-colors font-bold uppercase tracking-widest" do %>
+                <iconify-icon icon="solar:lock-unlocked-bold-duotone" class="mr-1 text-emerald-500"></iconify-icon>
+                오늘의 무료 리포트도 확인하세요 →
+              <% end %>
+            </div>
+          </div>
+        </div>
+      <% end %>
+
+      <!-- Multi-Agent Duel Mode -->
+      <% if @full_access && (@report.gpt_analysis.present? || @report.gemini_analysis.present? || @report.claude_analysis.present?) %>
+        <div class="mt-16 space-y-8">
+          <div class="flex items-center gap-4">
+            <div class="h-px flex-1 bg-primary/20"></div>
+            <span class="text-[11px] font-black text-primary uppercase tracking-[0.5em] animate-pulse">AI_DUEL_MODE_ENABLED</span>
+            <div class="h-px flex-1 bg-primary/20"></div>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <!-- GPT Codex -->
+            <div class="terminal-container rounded-2xl border-white/5 hover:border-blue-500/30 transition-all group">
+              <div class="terminal-header bg-blue-500/5 border-blue-500/10 px-4 py-2 flex items-center justify-between">
+                <span class="text-blue-400">🤖 GPT_CODEX</span>
+                <span class="text-[8px] opacity-50 font-mono">QUANT_MODEL</span>
+              </div>
+              <div class="p-5 space-y-4">
+                <div class="text-[10px] text-slate-400 font-mono leading-relaxed h-32 overflow-y-auto custom-scrollbar">
+                  <%= @report.gpt_analysis %>
+                </div>
+                <div class="pt-3 border-t border-white/5">
+                  <p class="text-[8px] text-slate-500 uppercase mb-1">Final Verdict</p>
+                  <p class="text-xs font-black text-blue-400 uppercase tracking-wider"><%= @report.gpt_pick || "UNDER_CALCULATION" %></p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Gemini 3.0 -->
+            <div class="terminal-container rounded-2xl border-primary/20 hover:border-primary/50 shadow-lg shadow-primary/5 transition-all">
+              <div class="terminal-header bg-primary/10 border-primary/20 px-4 py-2 flex items-center justify-between">
+                <span class="text-primary font-black italic">♊ GEMINI_3.0</span>
+                <span class="text-[8px] opacity-50 font-mono">DEEP_RESEARCH</span>
+              </div>
+              <div class="p-5 space-y-4">
+                <div class="text-[10px] text-slate-300 font-mono leading-relaxed h-32 overflow-y-auto custom-scrollbar">
+                  <%= @report.gemini_analysis %>
+                </div>
+                <div class="pt-3 border-t border-white/5">
+                  <p class="text-[8px] text-slate-500 uppercase mb-1">Final Verdict</p>
+                  <p class="text-xs font-black text-primary uppercase tracking-widest"><%= @report.gemini_pick || "UNDER_CALCULATION" %></p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Claude Code -->
+            <div class="terminal-container rounded-2xl border-white/5 hover:border-amber-500/30 transition-all">
+              <div class="terminal-header bg-amber-500/5 border-amber-500/10 px-4 py-2 flex items-center justify-between">
+                <span class="text-amber-400">🛡️ CLAUDE_CODE</span>
+                <span class="text-[8px] opacity-50 font-mono">TACTICAL_INTEL</span>
+              </div>
+              <div class="p-5 space-y-4">
+                <div class="text-[10px] text-slate-400 font-mono leading-relaxed h-32 overflow-y-auto custom-scrollbar">
+                  <%= @report.claude_analysis %>
+                </div>
+                <div class="pt-3 border-t border-white/5">
+                  <p class="text-[8px] text-slate-500 uppercase mb-1">Final Verdict</p>
+                  <p class="text-xs font-black text-amber-400 uppercase tracking-wider"><%= @report.claude_pick || "UNDER_CALCULATION" %></p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Consensus Banner -->
+          <% if @report.consensus_pick.present? %>
+            <div class="bg-gradient-to-r from-primary/20 via-secondary/20 to-primary/20 border border-primary/30 rounded-xl p-4 flex items-center justify-between">
+              <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white">
+                  <iconify-icon icon="solar:check-circle-bold" class="text-lg"></iconify-icon>
+                </div>
+                <div>
+                  <p class="text-[9px] font-black text-primary uppercase tracking-widest leading-none mb-1">Consensus Pick Achieved</p>
+                  <p class="text-sm font-black text-white uppercase"><%= @report.consensus_pick %></p>
+                </div>
+              </div>
+              <span class="text-[8px] font-mono text-primary/60">CONFIDENCE_LEVEL: HIGH</span>
             </div>
           <% end %>
         </div>
+      <% end %>
 
-        <% if data.dig(:edge_scan, :summary) %>
-          <div class="mt-4 p-3 bg-gray-700/30 light:bg-gray-100 rounded-lg">
-            <p class="text-gray-300 light:text-gray-700"><%= data.dig(:edge_scan, :summary) %></p>
+      <!-- Verified Badge -->
+      <% if @full_access %>
+        <div class="pt-12 border-t border-[var(--border-subtle)] flex items-center justify-between opacity-50 italic">
+          <div class="flex items-center gap-2">
+            <iconify-icon icon="solar:shield-check-bold" class="text-emerald-500 text-xl"></iconify-icon>
+            <span class="text-xs font-bold text-[var(--text-main)]">G9 Intelligence Verification Complete</span>
           </div>
-        <% end %>
-      </div>
-    <% end %>
+          <span class="text-[10px] font-bold font-mono">HASH_ID: <%= SecureRandom.hex(6).upcase %></span>
+        </div>
+      <% end %>
+    </div>
 
-    <!-- 5 Analyst Panel Section -->
-    <% if data[:panel] %>
-      <div class="bg-gray-800 light:bg-white rounded-2xl px-6 py-5 border border-gray-700 light:border-gray-200 light:shadow-sm mb-6">
-        <h2 class="text-lg font-bold mb-6 flex items-center light:text-gray-900">
-          <span class="w-9 h-9 bg-purple-600 rounded-xl flex items-center justify-center mr-4">👥</span>
-          5인 분석가 패널
-        </h2>
+    <!-- Sidebar Info -->
+    <div class="lg:col-span-4 space-y-6">
+      <div class="card-clean p-6 space-y-6">
+        <h3 class="text-xs font-black text-[var(--text-main)] uppercase tracking-[0.2em] border-b border-[var(--border-subtle)] pb-4 flex items-center gap-2">
+          <iconify-icon icon="solar:graph-bold-duotone" class="text-indigo-500"></iconify-icon>
+          Market Variables
+        </h3>
 
         <div class="space-y-4">
-          <% analysts = [
-            { key: :sharp, icon: '🎯', name: 'Sharp', desc: '데이터 중심', color: 'blue' },
-            { key: :scout, icon: '👁️', name: 'Scout', desc: '매치업 분석', color: 'green' },
-            { key: :contrarian, icon: '🔄', name: 'Contrarian', desc: '역발상', color: 'orange' },
-            { key: :momentum, icon: '📈', name: 'Momentum', desc: '추세 분석', color: 'pink' },
-            { key: :system, icon: '⚙️', name: 'System', desc: '규칙 기반', color: 'gray' }
-          ] %>
-
-          <% analysts.each do |analyst| %>
-            <% analyst_data = data.dig(:panel, analyst[:key]) %>
-            <% if analyst_data %>
-              <div class="bg-gray-700/30 light:bg-gray-50 rounded-xl px-5 py-4">
-                <div class="flex justify-between items-start">
-                  <div class="flex items-center gap-4">
-                    <span class="text-2xl"><%= analyst[:icon] %></span>
-                    <div>
-                      <div class="font-bold light:text-gray-900"><%= analyst[:name] %></div>
-                      <div class="text-xs text-gray-500"><%= analyst[:desc] %></div>
-                    </div>
+          <div class="flex justify-between items-end">
+            <span class="text-[10px] font-bold text-slate-400 uppercase">Home Spread</span>
+            <span class="text-sm font-mono font-bold text-[var(--text-main)]"><%= @report.game&.home_spread.present? ? (@report.game.home_spread > 0 ? "+#{@report.game.home_spread}" : @report.game.home_spread) : '--' %></span>
+          </div>
+          <div class="flex justify-between items-end">
+            <span class="text-[10px] font-bold text-slate-400 uppercase">Total O/U</span>
+            <span class="text-sm font-mono font-bold text-[var(--text-main)]"><%= @report.game&.total_line || '--' %></span>
+          </div>
+          <% if @report.edge_score.present? %>
+            <% edge = @report.edge_score.to_i
+               bar_width = [[edge, 0].max, 100].min
+               bar_color = edge >= 75 ? "bg-emerald-500" : edge >= 55 ? "bg-amber-500" : "bg-rose-500"
+               label_color = edge >= 75 ? "text-emerald-400" : edge >= 55 ? "text-amber-400" : "text-rose-400" %>
+            <div class="pt-2">
+              <div class="flex justify-between items-end mb-1.5">
+                <span class="text-[10px] font-bold text-slate-400 uppercase">Edge Score</span>
+                <span class="text-sm font-mono font-black <%= label_color %>"><%= edge %></span>
+              </div>
+              <div class="h-1.5 rounded-full bg-white/5 overflow-hidden">
+                <div class="h-full rounded-full <%= bar_color %> transition-all" style="width: <%= bar_width %>%"></div>
+              </div>
+            </div>
+          <% end %>
+          <div class="pt-4 border-t border-[var(--border-subtle)]">
+            <span class="text-[10px] font-bold text-slate-400 uppercase block mb-3 text-center tracking-widest">Recent Results</span>
+            <% if @recent_results.any? %>
+              <div class="space-y-2">
+                <% @recent_results.each do |result_report| %>
+                  <% result_style =
+                    case result_report.result
+                    when "win" then "text-emerald-400"
+                    when "loss" then "text-rose-400"
+                    else "text-slate-300"
+                    end %>
+                  <div class="flex items-center justify-between text-xs">
+                    <span class="text-slate-400"><%= result_report.pick.presence || result_report.title&.truncate(20) || "Report" %></span>
+                    <span class="font-black uppercase <%= result_style %>"><%= result_report.result %></span>
                   </div>
-                  <div class="text-right">
-                    <% if analyst_data[:pick] && analyst_data[:pick] != 'PASS' %>
-                      <div class="font-bold <%= analyst_data[:pick]&.include?(@report.game&.home_abbr.to_s) ? 'text-green-400 light:text-green-600' : 'text-red-400 light:text-red-600' %>">
-                        <%= analyst_data[:pick] %>
-                      </div>
-                    <% else %>
-                      <div class="text-gray-500">PASS</div>
-                    <% end %>
-                    <div class="text-yellow-400 light:text-yellow-500 text-sm"><%= '★' * (analyst_data[:confidence] || 0) %></div>
-                  </div>
-                </div>
-                <% if analyst_data[:comment] %>
-                  <p class="text-sm text-gray-400 light:text-gray-600 mt-4 italic leading-relaxed">"<%= analyst_data[:comment] %>"</p>
                 <% end %>
               </div>
-            <% end %>
-          <% end %>
-        </div>
-
-        <!-- Consensus Bar -->
-        <% if data.dig(:verdict, :consensus) %>
-          <div class="mt-6 pt-5 border-t border-gray-700 light:border-gray-200">
-            <div class="flex justify-between items-center mb-3">
-              <span class="text-sm text-gray-400 light:text-gray-500">패널 합의</span>
-              <span class="font-bold text-lg light:text-gray-900"><%= data.dig(:verdict, :consensus) %></span>
-            </div>
-            <div class="h-3 bg-gray-700 light:bg-gray-200 rounded-full overflow-hidden">
-              <% consensus_pct = (data.dig(:verdict, :consensus)&.split('/')&.first.to_i || 0) * 20 %>
-              <div class="h-full bg-gradient-to-r from-green-500 to-green-400 rounded-full" style="width: <%= consensus_pct %>%"></div>
-            </div>
-          </div>
-        <% end %>
-      </div>
-    <% end %>
-
-    <!-- Key Factors Section -->
-    <% if data[:key_factors] || data[:risks] %>
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-5 mb-6">
-        <% if data[:key_factors] %>
-          <div class="bg-green-900/20 light:bg-gray-50 border border-green-700/30 light:border-gray-200 rounded-2xl light:shadow-sm" style="padding: 24px;">
-            <h3 class="font-bold text-green-400 light:text-gray-900 flex items-center text-base" style="margin-bottom: 20px;">
-              <span style="margin-right: 12px;">✅</span> 핵심 근거
-            </h3>
-            <ul style="display: flex; flex-direction: column; gap: 16px;">
-              <% data[:key_factors].each do |factor| %>
-                <li class="text-gray-300 light:text-gray-700 flex items-start leading-relaxed">
-                  <span class="text-green-400 light:text-gray-500" style="margin-right: 12px; margin-top: 2px; font-size: 18px;">•</span>
-                  <span><%= factor %></span>
-                </li>
-              <% end %>
-            </ul>
-          </div>
-        <% end %>
-
-        <% if data[:risks] %>
-          <div class="bg-red-900/20 light:bg-gray-50 border border-red-700/30 light:border-gray-200 rounded-2xl light:shadow-sm" style="padding: 24px;">
-            <h3 class="font-bold text-red-400 light:text-gray-900 flex items-center text-base" style="margin-bottom: 20px;">
-              <span style="margin-right: 12px;">⚠️</span> 리스크 요인
-            </h3>
-            <ul style="display: flex; flex-direction: column; gap: 16px;">
-              <% data[:risks].each do |risk| %>
-                <li class="text-gray-300 light:text-gray-700 flex items-start leading-relaxed">
-                  <span class="text-red-400 light:text-gray-500" style="margin-right: 12px; margin-top: 2px; font-size: 18px;">•</span>
-                  <span><%= risk %></span>
-                </li>
-              <% end %>
-            </ul>
-          </div>
-        <% end %>
-      </div>
-    <% end %>
-
-    <!-- Betting Guide Section -->
-    <% if data[:betting_guide] %>
-      <div class="bg-gray-800 light:bg-white rounded-2xl border border-gray-700 light:border-gray-200 light:shadow-sm mb-6" style="padding: 24px;">
-        <h2 class="text-lg font-bold flex items-center light:text-gray-900" style="margin-bottom: 24px;">
-          <span class="bg-yellow-600 rounded-xl flex items-center justify-center" style="width: 36px; height: 36px; margin-right: 16px;">💰</span>
-          베팅 가이드
-        </h2>
-
-        <% if data.dig(:betting_guide, :recommended) %>
-          <div style="display: flex; flex-direction: column; gap: 16px;">
-            <% data.dig(:betting_guide, :recommended).each_with_index do |bet, idx| %>
-              <div class="flex justify-between items-center bg-gray-700/50 light:bg-gray-100 rounded-xl" style="padding: 16px 20px;">
-                <div class="flex items-center" style="gap: 16px;">
-                  <span class="bg-yellow-600 rounded-full flex items-center justify-center text-sm font-bold text-white" style="width: 32px; height: 32px;"><%= idx + 1 %></span>
-                  <span class="font-bold text-base light:text-gray-900"><%= bet[:pick] %></span>
-                </div>
-                <div class="text-right">
-                  <span class="text-yellow-400 light:text-amber-600 font-bold text-lg"><%= bet[:stake] %>u</span>
-                </div>
+            <% else %>
+              <div class="text-center font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-tighter">
+                Results pending
               </div>
             <% end %>
           </div>
-        <% end %>
-
-        <% if data.dig(:betting_guide, :live_tip) %>
-          <div class="bg-blue-600/10 light:bg-indigo-50 border border-blue-600/30 light:border-gray-200 rounded-xl" style="margin-top: 24px; padding: 20px;">
-            <div class="text-sm text-blue-400 light:text-gray-700 font-semibold" style="margin-bottom: 10px;">💡 LIVE BETTING TIP</div>
-            <p class="text-gray-300 light:text-gray-700 leading-relaxed"><%= data.dig(:betting_guide, :live_tip) %></p>
-          </div>
-        <% end %>
-      </div>
-    <% end %>
-
-  <% else %>
-    <!-- Fallback: Markdown Content (Old Style) -->
-    <div class="bg-gray-800 light:bg-white rounded-xl p-6 border border-gray-700 light:border-gray-200 light:shadow-sm mb-4">
-      <div class="flex justify-between items-start mb-4">
-        <div>
-          <div class="text-2xl font-bold light:text-gray-900"><%= @report.title %></div>
-          <div class="text-sm text-gray-500 mt-1"><%= @report.game&.game_date&.strftime("%Y-%m-%d %H:%M") %> KST</div>
         </div>
-        <div class="text-xl font-bold text-indigo-500"><%= @report.confidence %></div>
       </div>
 
-      <% if @report.pick.present? %>
-        <div class="bg-indigo-600/20 light:bg-indigo-50 border border-indigo-500/30 light:border-indigo-200 rounded-lg p-4 mb-4">
-          <div class="text-xs text-indigo-400 light:text-indigo-600 mb-1">PICK</div>
-          <div class="text-xl font-bold light:text-gray-900"><%= @report.pick %></div>
-        </div>
-      <% end %>
-
-      <div class="prose prose-invert light:prose prose-sm max-w-none light:text-gray-700">
-        <%= render_markdown(@report.content) %>
+      <!-- Disclosure -->
+      <div class="px-2">
+        <p class="text-[10px] text-slate-500 leading-relaxed text-center">
+          G9 Intelligence 리포트는 고도의 알고리즘 연산을 통해 생성됩니다. 과거의 성과가 미래의 수익을 보장하지 않습니다. <strong>철저한 자금 관리(Bankroll)를 권장합니다.</strong>
+        </p>
       </div>
     </div>
-  <% end %>
 
-  <!-- Footer -->
-  <div class="text-center text-xs text-gray-600 light:text-gray-500 mt-6">
-    Published <%= @report.published_at&.strftime("%Y-%m-%d %H:%M") %> KST
-    <span class="mx-2">•</span>
-    G9 Sports Intelligence
   </div>
 </div>

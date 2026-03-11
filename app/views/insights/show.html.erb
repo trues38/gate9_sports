@@ -1,30 +1,74 @@
-<div class="px-4 py-4">
+<% content_for :title do %>
+  <%= @insight.title %> | Gate9 AI
+<% end %>
+
+<% content_for :head do %>
+  <meta name="description" content="<%= @insight.meta_description.presence || @insight.content.to_s.truncate(155) %>">
+  <meta property="og:title" content="<%= @insight.title %>">
+  <meta property="og:description" content="<%= @insight.meta_description.presence || @insight.content.to_s.truncate(155) %>">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="<%= request.original_url %>">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="<%= @insight.title %>">
+  <meta name="twitter:description" content="<%= @insight.meta_description.presence || @insight.content.to_s.truncate(155) %>">
+  <% if @insight.tags_array.any? %>
+    <meta name="keywords" content="<%= @insight.tags_array.join(', ') %>">
+  <% end %>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    "headline": "<%= j @insight.title %>",
+    "description": "<%= j(@insight.meta_description.presence || @insight.content.to_s.truncate(155)) %>",
+    "datePublished": "<%= @insight.published_at&.iso8601 %>",
+    "dateModified": "<%= @insight.updated_at&.iso8601 %>",
+    "publisher": {
+      "@type": "Organization",
+      "name": "Gate9 Sports",
+      "url": "https://gate9sports.com"
+    },
+    "keywords": "<%= @insight.tags_array.join(', ') %>"
+  }
+  </script>
+<% end %>
+
+<div class="px-4 py-6 max-w-4xl mx-auto space-y-8">
   <!-- Back Button -->
-  <%= link_to insights_path(sport: current_sport&.slug), class: "inline-flex items-center text-gray-400 hover:text-white light:hover:text-gray-900 mb-4" do %>
-    <iconify-icon icon="solar:arrow-left-linear" width="20" class="mr-1"></iconify-icon>
-    <%= t('insights.back') %>
+  <%= link_to insights_path(sport: current_sport&.slug), class: "inline-flex items-center gap-2 text-th-muted hover:text-emerald-400 transition-all group mb-2" do %>
+    <div class="w-8 h-8 rounded-full glass-panel flex items-center justify-center group-hover:bg-emerald-500/10 transition-all">
+        <iconify-icon icon="solar:alt-arrow-left-linear" width="18"></iconify-icon>
+    </div>
+    <span class="text-[10px] font-black uppercase tracking-widest">Back to Intelligence</span>
   <% end %>
 
   <!-- Insight Header -->
-  <div class="mb-4">
-    <div class="text-sm text-indigo-500 font-medium mb-2"><%= t("categories.#{@insight.category}", default: @insight.category&.titleize) %></div>
-    <h1 class="text-2xl font-bold light:text-gray-900"><%= @insight.title %></h1>
-    <div class="flex items-center gap-2 mt-3">
+  <div class="space-y-4">
+    <div class="text-[10px] font-black text-emerald-500 uppercase tracking-[0.3em] flex items-center gap-2">
+        <iconify-icon icon="solar:bolt-circle-bold-duotone" width="14"></iconify-icon>
+        <%= t("categories.#{@insight.category}", default: @insight.category&.titleize) %>
+    </div>
+    <h1 class="text-4xl font-display font-black text-th-heading leading-tight uppercase tracking-tighter"><%= @insight.title %></h1>
+    <div class="flex items-center gap-3 pt-2">
       <% @insight.tags_array.each do |tag| %>
-        <span class="text-xs px-2 py-1 bg-gray-800 light:bg-gray-100 text-gray-400 light:text-gray-600 rounded"><%= tag %></span>
+        <span class="text-[9px] font-black px-2.5 py-1 bg-white/5 text-th-subtle border border-white/10 rounded uppercase tracking-tighter hover:text-white transition-all cursor-default"><%= tag %></span>
       <% end %>
     </div>
   </div>
 
   <!-- Insight Content -->
-  <div class="bg-gray-900 light:bg-white rounded-xl p-4 border border-gray-800 light:border-gray-200 light:shadow-sm">
-    <div class="prose prose-invert light:prose prose-sm max-w-none light:text-gray-700">
+  <div class="glass-panel rounded-3xl p-10 border-white/5 neon-border bg-emerald-500/[0.01]">
+    <div class="prose prose-invert prose-emerald max-w-none 
+                prose-p:text-th-body prose-p:leading-relaxed prose-p:text-lg
+                prose-strong:text-emerald-400
+                light:prose-p:text-slate-600">
       <%= simple_format(@insight.content) %>
     </div>
   </div>
 
   <!-- Footer -->
-  <div class="mt-4 text-center text-xs text-gray-600 light:text-gray-400">
-    <%= t('insights.published', default: 'Published') %> <%= @insight.published_at&.strftime("%Y-%m-%d %H:%M") %> KST
+  <div class="text-center pt-12 border-t border-white/5 opacity-30">
+    <p class="text-[10px] font-black text-th-muted uppercase tracking-[0.5em]">
+        <%= t('insights.published', default: 'Broadcast Time') %>: <%= @insight.published_at&.strftime("%Y.%m.%d %H:%M") %> KST
+    </p>
   </div>
 </div>

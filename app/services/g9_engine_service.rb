@@ -181,104 +181,87 @@ class G9EngineService
 
   # === Total Engine Query ===
 
-  # Total Edge Score 쿼리
-  # 예상 토탈 = home_off_rtg + away_off_rtg (약 228-232 평균)
+  # Total Engine v3.0 - 단순화
+  # 복잡한 가중치 계산 대신 토탈 라인 구간별 분석
+  # VPS 복구 후 백테스트로 검증 필요
+  #
+  # 가설 (검증 필요):
+  #   Low (210-220): Under 편향 가능
+  #   Medium (220-235): 중립
+  #   High (235+): Over 편향 가능 (고득점 시대)
   def total_engine_query
     <<~CYPHER
       WITH $target_date AS target_date
 
-      // 1. 경기 + 팀 매칭
       MATCH (g:Game)
       WHERE g.date = target_date
+        AND g.status <> 'Final'
+        AND g.total IS NOT NULL
       MATCH (home:Team {abbr: g.home_team})
       MATCH (away:Team {abbr: g.away_team})
 
-      // 2. 데이터 수집
       WITH g, home, away,
+           g.total AS total_line,
            coalesce(home.off_rtg, 114) AS h_off,
            coalesce(away.off_rtg, 114) AS a_off,
            coalesce(home.def_rtg, 114) AS h_def,
-           coalesce(away.def_rtg, 114) AS a_def,
-           coalesce(home.pace, 100) AS h_pace,
-           coalesce(away.pace, 100) AS a_pace,
-           coalesce(home.over_pct, 0.5) AS h_over_pct,
-           coalesce(away.over_pct, 0.5) AS a_over_pct
+           coalesce(away.def_rtg, 114) AS a_def
 
-      // 3. 예상 토탈 계산
-      // 공식: (홈공격 + 원정공격) * 평균페이스 / 100 조정
-      WITH g, home, away, h_off, a_off, h_def, a_def, h_pace, a_pace, h_over_pct, a_over_pct,
-           (h_off + a_off) * ((h_pace + a_pace) / 200.0) AS expected_total,
-           coalesce(g.total, 230) AS market_total
+      // 토탈 라인 구간 분류
+      WITH g, home, away, total_line, h_off, a_off, h_def, a_def,
+           // 예상 토탈 (공격력 합 - 간단 공식)
+           h_off + a_off AS expected_raw,
+           CASE
+             WHEN total_line < 220 THEN 'LOW'
+             WHEN total_line < 235 THEN 'MEDIUM'
+             ELSE 'HIGH'
+           END AS total_tier
 
-      // 4. Total Edge Score 계산
-      WITH g, home, away, h_off, a_off, h_def, a_def, h_pace, a_pace,
-           h_over_pct, a_over_pct, expected_total, market_total,
-           expected_total - market_total AS total_diff,
-           // 기본 50
-           50 +
-           // 예상 vs 마켓 차이 (Over/Under 방향)
+      // 예상 vs 마켓 비교
+      WITH g, home, away, total_line, h_off, a_off, h_def, a_def,
+           expected_raw, total_tier,
+           expected_raw - total_line AS diff,
            CASE
-             WHEN expected_total - market_total > 10 THEN 15   // Strong Over
-             WHEN expected_total - market_total > 5 THEN 10    // Over
-             WHEN expected_total - market_total > 2 THEN 5     // Slight Over
-             WHEN expected_total - market_total > -2 THEN 0    // Neutral
-             WHEN expected_total - market_total > -5 THEN -5   // Slight Under
-             WHEN expected_total - market_total > -10 THEN -10 // Under
-             ELSE -15                                           // Strong Under
-           END +
-           // 공격력 조합 (양팀 고효율 → Over)
+             WHEN expected_raw - total_line > 5 THEN 'OVER'
+             WHEN expected_raw - total_line < -5 THEN 'UNDER'
+             ELSE 'NEUTRAL'
+           END AS pick_direction,
+           // 신호 강도 (diff 기반)
            CASE
-             WHEN h_off > 118 AND a_off > 118 THEN 5  // 양팀 고효율
-             WHEN h_off < 110 AND a_off < 110 THEN -5 // 양팀 저효율
-             ELSE 0
-           END +
-           // 수비력 조합 (양팀 약수비 → Over)
-           CASE
-             WHEN h_def > 116 AND a_def > 116 THEN 5  // 양팀 약수비
-             WHEN h_def < 108 AND a_def < 108 THEN -5 // 양팀 강수비
-             ELSE 0
-           END +
-           // Over% 트렌드
-           CASE
-             WHEN h_over_pct > 0.55 AND a_over_pct > 0.55 THEN 3
-             WHEN h_over_pct < 0.45 AND a_over_pct < 0.45 THEN -3
-             ELSE 0
-           END
-           AS raw_total_edge
-
-      // 5. 정규화 및 픽 결정
-      WITH g, home, away, h_off, a_off, h_def, a_def,
-           expected_total, market_total, total_diff, raw_total_edge,
-           CASE WHEN raw_total_edge >= 50 THEN raw_total_edge
-                ELSE 100 - raw_total_edge END AS total_edge,
-           CASE WHEN raw_total_edge >= 50 THEN 'OVER' ELSE 'UNDER' END AS pick_side
+             WHEN ABS(expected_raw - total_line) > 8 THEN 'LEAN'
+             ELSE 'WATCH'
+           END AS signal
 
       RETURN
         g.date AS date,
         away.abbr AS away,
         home.abbr AS home,
-        round(total_edge, 1) AS total_edge_score,
-        pick_side,
-        round(expected_total, 1) AS expected_total,
-        round(market_total, 1) AS market_total,
-        round(total_diff, 1) AS total_diff,
+        round(total_line, 1) AS total_line,
+        total_tier,
+        round(expected_raw, 1) AS expected_total,
+        round(diff, 1) AS diff,
+        pick_direction,
+        signal,
         round(h_off, 1) AS home_off_rtg,
         round(a_off, 1) AS away_off_rtg,
         round(h_def, 1) AS home_def_rtg,
         round(a_def, 1) AS away_def_rtg,
+        g.time_et AS time_et,
         g.status AS status,
         g.home_score AS home_score,
-        g.away_score AS away_score,
-        g.total_result AS actual_result
-      ORDER BY total_edge DESC
+        g.away_score AS away_score
+      ORDER BY
+        CASE signal WHEN 'LEAN' THEN 1 ELSE 2 END,
+        ABS(diff) DESC
     CYPHER
   end
 
-  # Total 결과 파싱
+  # Total 결과 파싱 v3.0
   def parse_total_results(raw_results)
     raw_results.map do |r|
-      edge = r['total_edge_score'].to_f
-      signal = determine_total_signal(edge, r['pick_side'])
+      signal_raw = r['signal']
+      pick_dir = r['pick_direction']
+      signal = determine_total_signal_v3(signal_raw, pick_dir, r['diff'].to_f)
 
       {
         date: r['date'],
@@ -286,26 +269,43 @@ class G9EngineService
         away: r['away'],
         home: r['home'],
         pick_type: 'TOTAL',
-        total_edge_score: edge,
-        pick_side: r['pick_side'],
+        total_line: r['total_line'].to_f,
+        total_tier: r['total_tier'],
         expected_total: r['expected_total'].to_f,
-        market_total: r['market_total'].to_f,
-        total_diff: r['total_diff'].to_f,
+        diff: r['diff'].to_f,
+        pick_direction: pick_dir,
         home_off_rtg: r['home_off_rtg'].to_f,
         away_off_rtg: r['away_off_rtg'].to_f,
         home_def_rtg: r['home_def_rtg'].to_f,
         away_def_rtg: r['away_def_rtg'].to_f,
+        time_et: r['time_et'],
         status: r['status'],
         home_score: r['home_score'],
         away_score: r['away_score'],
-        actual_result: r['actual_result'],
         signal: signal,
-        actionable: edge >= TOTAL_THRESHOLDS[:bet]
+        actionable: signal_raw == 'LEAN' && pick_dir != 'NEUTRAL'
       }
     end
   end
 
-  # Total Signal 결정
+  # Total Signal 결정 v3.0
+  # signal_raw: LEAN, WATCH
+  # pick_dir: OVER, UNDER, NEUTRAL
+  def determine_total_signal_v3(signal_raw, pick_dir, diff)
+    return '🚫 TOTAL NEUTRAL' if pick_dir == 'NEUTRAL'
+
+    prefix = pick_dir == 'OVER' ? '📈' : '📉'
+    diff_label = "(#{diff > 0 ? '+' : ''}#{diff.round(1)})"
+
+    case signal_raw
+    when 'LEAN'
+      "#{prefix} #{pick_dir} LEAN #{diff_label}"
+    else
+      "➖ #{pick_dir} WATCH #{diff_label}"
+    end
+  end
+
+  # 기존 함수 유지 (호환성)
   def determine_total_signal(edge, side)
     prefix = side == 'OVER' ? '📈' : '📉'
 
@@ -474,117 +474,94 @@ class G9EngineService
 
   # === Spread Engine Query ===
 
-  # Spread Edge Score 쿼리 v2.0
-  # 핵심: 예상 마진 vs 시장 라인 비교로 실제 베팅 가치 판단
-  # 예상 마진 = (home_net_rtg - away_net_rtg) + 3.5 (홈 어드밴티지)
-  # 라인 차이 = expected_margin - market_spread (양수 = 홈 커버 유리)
+  # Spread Engine v3.0 - 백테스트 기반 단순화
+  # 핵심: 5-15pt 스프레드에서 언더독 62% 커버
+  # 복잡한 가중치 계산 대신 역사적 데이터 기반 규칙
+  #
+  # 백테스트 결과 (2024-10 ~ 2026-01, 2247 경기):
+  #   0-2pt:  48.6% underdog cover (엣지 없음)
+  #   2-5pt:  54.8% underdog cover (+4.8% 엣지)
+  #   5-10pt: 62.0% underdog cover (+12% 엣지)
+  #   10-15pt:62.5% underdog cover (+12.5% 엣지)
+  #   15+pt:  55.8% underdog cover (+5.8% 엣지)
   def spread_engine_query
     <<~CYPHER
       WITH $target_date AS target_date
 
-      // 1. 경기 + 팀 매칭
       MATCH (g:Game)
       WHERE g.date = target_date
+        AND g.status <> 'Final'
+        AND g.spread IS NOT NULL
       MATCH (home:Team {abbr: g.home_team})
       MATCH (away:Team {abbr: g.away_team})
 
-      // 2. TeamRegime 조인
-      OPTIONAL MATCH (hr:TeamRegime) WHERE hr.team CONTAINS home.name
-      OPTIONAL MATCH (ar:TeamRegime) WHERE ar.team CONTAINS away.name
-
-      // 3. 데이터 수집
       WITH g, home, away,
-           coalesce(home.net_rtg, 0) AS h_net,
-           coalesce(away.net_rtg, 0) AS a_net,
-           coalesce(home.ats_home_pct, 0.5) AS h_ats_home,
-           coalesce(away.ats_away_pct, 0.5) AS a_ats_away,
-           coalesce(hr.flow_state, 'NEUTRAL') AS h_flow,
-           coalesce(ar.flow_state, 'NEUTRAL') AS a_flow,
-           coalesce(g.spread, 0) AS market_spread
+           g.spread AS spread,
+           ABS(g.spread) AS abs_spread,
+           // 언더독 판별: spread < 0 = away favored = home is underdog
+           CASE WHEN g.spread < 0 THEN home.abbr ELSE away.abbr END AS underdog,
+           CASE WHEN g.spread < 0 THEN 'HOME' ELSE 'AWAY' END AS dog_side,
+           CASE WHEN g.spread < 0 THEN away.abbr ELSE home.abbr END AS favorite,
+           CASE WHEN g.spread < 0 THEN 'AWAY' ELSE 'HOME' END AS fav_side
 
-      // 4. 예상 마진 계산 (Net Rating 차이 + 홈 어드밴티지)
-      // 라인 차이 = 예상 마진 - 시장 스프레드
-      // 양수 = 홈이 시장 예상보다 강함 → 홈 커버 유리
-      // 음수 = 어웨이가 시장 예상보다 강함 → 어웨이 커버 유리
-      WITH g, home, away, h_net, a_net, h_ats_home, a_ats_away, h_flow, a_flow, market_spread,
-           (h_net - a_net) + 3.5 AS expected_margin,
-           ((h_net - a_net) + 3.5) - market_spread AS line_diff
-
-      // 5. Spread Edge Score 계산 (라인 대비 기대마진 기반)
-      WITH g, home, away, h_net, a_net, h_ats_home, a_ats_away, h_flow, a_flow,
-           market_spread, expected_margin, line_diff,
-           // 기본 50
-           50 +
-           // 라인 차이 기반 조정 (핵심 로직)
-           // 양수 = 홈 커버 유리, 음수 = 어웨이 커버 유리
+      // 스프레드 구간별 분류 및 역사적 커버율
+      WITH g, home, away, spread, abs_spread, underdog, dog_side, favorite, fav_side,
            CASE
-             WHEN line_diff > 8 THEN 20      // 홈 8점+ 저평가
-             WHEN line_diff > 5 THEN 15      // 홈 5-8점 저평가
-             WHEN line_diff > 3 THEN 10      // 홈 3-5점 저평가
-             WHEN line_diff > 1 THEN 5       // 홈 1-3점 저평가
-             WHEN line_diff > -1 THEN 0      // 1점 이내 = 정당 라인
-             WHEN line_diff > -3 THEN -5     // 어웨이 1-3점 저평가
-             WHEN line_diff > -5 THEN -10    // 어웨이 3-5점 저평가
-             WHEN line_diff > -8 THEN -15    // 어웨이 5-8점 저평가
-             ELSE -20                         // 어웨이 8점+ 저평가
-           END +
-           // ATS 트렌드 보너스 (보조)
-           CASE WHEN h_ats_home > 0.55 THEN 3
-                WHEN h_ats_home < 0.45 THEN -3
-                ELSE 0 END +
-           CASE WHEN a_ats_away > 0.55 THEN -3
-                WHEN a_ats_away < 0.45 THEN 3
-                ELSE 0 END +
-           // Flow 조정 (보조)
+             WHEN abs_spread >= 15 THEN '15+'
+             WHEN abs_spread >= 10 THEN '10-15'
+             WHEN abs_spread >= 5 THEN '5-10'
+             WHEN abs_spread >= 2 THEN '2-5'
+             ELSE '0-2'
+           END AS spread_tier,
            CASE
-             WHEN h_flow IN ['HOT_STREAK', 'STRONG_UP'] THEN 2
-             WHEN h_flow IN ['COLD_STREAK', 'SLUMP'] THEN -2
-             ELSE 0
-           END +
+             WHEN abs_spread >= 10 AND abs_spread < 15 THEN 62.5
+             WHEN abs_spread >= 5 AND abs_spread < 10 THEN 62.0
+             WHEN abs_spread >= 15 THEN 55.8
+             WHEN abs_spread >= 2 AND abs_spread < 5 THEN 54.8
+             ELSE 48.6
+           END AS historical_cover_pct,
            CASE
-             WHEN a_flow IN ['HOT_STREAK', 'STRONG_UP'] THEN -2
-             WHEN a_flow IN ['COLD_STREAK', 'SLUMP'] THEN 2
-             ELSE 0
-           END
-           AS raw_spread_edge
-
-      // 6. 정규화 및 픽 결정
-      WITH g, home, away, h_net, a_net, h_ats_home, a_ats_away, h_flow, a_flow,
-           market_spread, expected_margin, line_diff, raw_spread_edge,
-           CASE WHEN raw_spread_edge >= 50 THEN raw_spread_edge
-                ELSE 100 - raw_spread_edge END AS spread_edge,
-           CASE WHEN raw_spread_edge >= 50 THEN 'HOME' ELSE 'AWAY' END AS pick_side,
-           CASE WHEN raw_spread_edge >= 50 THEN home.abbr ELSE away.abbr END AS pick_team
+             WHEN abs_spread >= 5 AND abs_spread < 15 THEN 'RECOMMEND'
+             WHEN abs_spread >= 2 AND abs_spread < 5 THEN 'LEAN'
+             WHEN abs_spread >= 15 THEN 'NEUTRAL'
+             ELSE 'PASS'
+           END AS signal
 
       RETURN
         g.date AS date,
         away.abbr AS away,
         home.abbr AS home,
-        round(spread_edge, 1) AS spread_edge_score,
-        pick_side,
-        pick_team AS recommended,
-        round(expected_margin, 1) AS expected_margin,
-        round(market_spread, 1) AS market_spread,
-        round(line_diff, 1) AS line_diff,
-        round(h_net, 1) AS home_net_rtg,
-        round(a_net, 1) AS away_net_rtg,
-        round(h_ats_home * 100, 1) AS home_ats_pct,
-        round(a_ats_away * 100, 1) AS away_ats_pct,
-        h_flow AS home_flow,
-        a_flow AS away_flow,
+        round(spread, 1) AS spread,
+        round(abs_spread, 1) AS abs_spread,
+        spread_tier,
+        underdog AS recommended,
+        dog_side AS pick_side,
+        favorite,
+        fav_side,
+        historical_cover_pct,
+        signal,
+        g.time_et AS time_et,
         g.status AS status,
         g.home_score AS home_score,
         g.away_score AS away_score
-      ORDER BY spread_edge DESC
+      ORDER BY
+        CASE signal
+          WHEN 'RECOMMEND' THEN 1
+          WHEN 'LEAN' THEN 2
+          WHEN 'NEUTRAL' THEN 3
+          ELSE 4
+        END,
+        abs_spread DESC
     CYPHER
   end
 
-  # Spread 결과 파싱
+  # Spread 결과 파싱 v3.0
+  # 백테스트 기반 단순화 - 역사적 커버율과 신호로 판단
   def parse_spread_results(raw_results)
     raw_results.map do |r|
-      edge = r['spread_edge_score'].to_f
-      line_diff = r['line_diff'].to_f
-      signal = determine_spread_signal(edge, line_diff)
+      signal_raw = r['signal']
+      historical_pct = r['historical_cover_pct'].to_f
+      signal = determine_spread_signal_v3(signal_raw, historical_pct)
 
       {
         date: r['date'],
@@ -592,32 +569,47 @@ class G9EngineService
         away: r['away'],
         home: r['home'],
         pick_type: 'SPREAD',
-        spread_edge_score: edge,
-        recommended: r['recommended'],
-        pick_side: r['pick_side'],
-        expected_margin: r['expected_margin'].to_f,
-        market_spread: r['market_spread'].to_f,
-        line_diff: line_diff,
-        home_net_rtg: r['home_net_rtg'].to_f,
-        away_net_rtg: r['away_net_rtg'].to_f,
-        home_ats_pct: r['home_ats_pct'].to_f,
-        away_ats_pct: r['away_ats_pct'].to_f,
-        home_flow: r['home_flow'],
-        away_flow: r['away_flow'],
+        spread: r['spread'].to_f,
+        abs_spread: r['abs_spread'].to_f,
+        spread_tier: r['spread_tier'],
+        recommended: r['recommended'],  # 언더독
+        pick_side: r['pick_side'],       # HOME or AWAY
+        favorite: r['favorite'],
+        fav_side: r['fav_side'],
+        historical_cover_pct: historical_pct,
+        time_et: r['time_et'],
         status: r['status'],
         home_score: r['home_score'],
         away_score: r['away_score'],
         signal: signal,
-        actionable: edge >= SPREAD_THRESHOLDS[:bet]
+        actionable: %w[RECOMMEND LEAN].include?(signal_raw)
       }
     end
   end
 
-  # Spread Signal 결정
-  # line_diff: 예상 마진 - 시장 스프레드 (양수=홈 저평가, 음수=어웨이 저평가)
-  def determine_spread_signal(edge, line_diff = 0)
-    value_label = if line_diff.abs >= 5
-                    " (#{line_diff > 0 ? '+' : ''}#{line_diff.round(1)}pt)"
+  # Spread Signal 결정 v3.0
+  # 백테스트 기반 - 역사적 커버율로 신호 결정
+  # signal_raw: RECOMMEND, LEAN, NEUTRAL, PASS
+  # historical_pct: 해당 구간 역사적 언더독 커버율
+  def determine_spread_signal_v3(signal_raw, historical_pct)
+    pct_label = "(#{historical_pct.round(1)}%)"
+
+    case signal_raw
+    when 'RECOMMEND'
+      "💎 DOG COVER #{pct_label}"  # 5-15pt, 62% edge
+    when 'LEAN'
+      "📍 DOG LEAN #{pct_label}"   # 2-5pt, 54.8% edge
+    when 'NEUTRAL'
+      "➖ BIG SPREAD #{pct_label}" # 15+pt, 55.8% but risky
+    else
+      "🚫 COIN FLIP #{pct_label}"  # 0-2pt, 48.6%
+    end
+  end
+
+  # 기존 함수 유지 (호환성)
+  def determine_spread_signal(edge, cover_value = 0)
+    value_label = if cover_value.abs >= 5
+                    " (#{cover_value > 0 ? '+' : ''}#{cover_value.round(1)}pt)"
                   else
                     ""
                   end
@@ -636,105 +628,172 @@ class G9EngineService
     end
   end
 
-  # === ML Engine Query ===
+  # === ML Engine Query (역배 알림 모드) ===
 
-  # G9 Engine v2.3 Cypher 쿼리
+  # ML Engine v3.0 - 역배(Upset) 알림 전용
+  # 핵심: 큰 스프레드 경기에서 페이보릿 추천하면 ROI 없음
+  # 대신 역배 가능성 감지하여 경고
+  #
+  # 역배 조건:
+  #   1. 페이보릿이 슬럼프 (COLD_STREAK, SLUMP, WARMING)
+  #   2. 언더독이 핫스트릭 (HOT_STREAK, STRONG_UP)
+  #   3. 스프레드 7pt 이상 (역배 의미 있는 범위)
   def engine_query
     <<~CYPHER
       WITH $target_date AS target_date
 
-      // 1. 경기 + 팀 매칭
       MATCH (g:Game)
       WHERE g.date = target_date
+        AND g.status <> 'Final'
+        AND g.spread IS NOT NULL
+        AND ABS(g.spread) >= 5  // 의미있는 스프레드만
       MATCH (home:Team {abbr: g.home_team})
       MATCH (away:Team {abbr: g.away_team})
 
-      // 2. TeamRegime 조인
+      // TeamRegime 조인
       OPTIONAL MATCH (hr:TeamRegime) WHERE hr.team CONTAINS home.name
       OPTIONAL MATCH (ar:TeamRegime) WHERE ar.team CONTAINS away.name
 
-      // 3. 데이터 수집
       WITH g, home, away,
-           coalesce(home.win_pct, 0.5) AS h_pct,
-           coalesce(away.win_pct, 0.5) AS a_pct,
-           coalesce(home.net_rtg, 0) AS h_net,
-           coalesce(away.net_rtg, 0) AS a_net,
+           g.spread AS spread,
+           ABS(g.spread) AS abs_spread,
+           // 페이보릿/언더독 판별
+           CASE WHEN g.spread < 0 THEN home.abbr ELSE away.abbr END AS underdog,
+           CASE WHEN g.spread < 0 THEN away.abbr ELSE home.abbr END AS favorite,
+           CASE WHEN g.spread < 0 THEN 'HOME' ELSE 'AWAY' END AS dog_side,
+           CASE WHEN g.spread < 0 THEN 'AWAY' ELSE 'HOME' END AS fav_side,
+           // Flow states
            coalesce(hr.flow_state, 'NEUTRAL') AS h_flow,
-           coalesce(ar.flow_state, 'NEUTRAL') AS a_flow
+           coalesce(ar.flow_state, 'NEUTRAL') AS a_flow,
+           // Net ratings
+           coalesce(home.net_rtg, 0) AS h_net,
+           coalesce(away.net_rtg, 0) AS a_net
 
-      // 4. Edge Score 계산
-      WITH g, home, away, h_pct, a_pct, h_net, a_net, h_flow, a_flow,
-           50 +
-           (h_pct - a_pct) * 30 +
+      // 역배 조건 체크
+      WITH g, home, away, spread, abs_spread, underdog, favorite, dog_side, fav_side,
+           h_flow, a_flow, h_net, a_net,
+           // 페이보릿 flow (fav_side 기준)
+           CASE WHEN fav_side = 'HOME' THEN h_flow ELSE a_flow END AS fav_flow,
+           // 언더독 flow
+           CASE WHEN dog_side = 'HOME' THEN h_flow ELSE a_flow END AS dog_flow,
+           // Net rating 차이
+           CASE WHEN fav_side = 'HOME' THEN h_net - a_net ELSE a_net - h_net END AS fav_net_edge
+
+      // 역배 경고 조건
+      WITH g, home, away, spread, abs_spread, underdog, favorite, dog_side, fav_side,
+           fav_flow, dog_flow, fav_net_edge, h_net, a_net,
+           // 페이보릿 슬럼프?
+           CASE WHEN fav_flow IN ['COLD_STREAK', 'SLUMP', 'WARMING'] THEN true ELSE false END AS fav_slump,
+           // 언더독 핫스트릭?
+           CASE WHEN dog_flow IN ['HOT_STREAK', 'STRONG_UP'] THEN true ELSE false END AS dog_hot,
+           // 스프레드 대비 실제 실력차 괴리
+           // fav_net_edge가 스프레드보다 작으면 over-valued
+           CASE WHEN fav_net_edge < abs_spread * 0.7 THEN true ELSE false END AS line_inflated
+
+      // 최종 역배 신호
+      WITH g, home, away, spread, abs_spread, underdog, favorite, dog_side, fav_side,
+           fav_flow, dog_flow, fav_net_edge, fav_slump, dog_hot, line_inflated, h_net, a_net,
+           // 역배 알림 조건 (하나라도 만족)
            CASE
-             WHEN abs(h_net - a_net) >= 10 THEN
-               CASE WHEN h_net > a_net THEN 20 ELSE -20 END
-             ELSE (h_net - a_net) * 2
-           END +
-           5 AS raw_edge
+             WHEN fav_slump AND dog_hot THEN 'HIGH'     // 둘 다 만족 = 강한 역배 경고
+             WHEN fav_slump AND abs_spread >= 10 THEN 'MEDIUM'  // 페이보릿 슬럼프 + 큰 스프레드
+             WHEN dog_hot AND abs_spread >= 10 THEN 'MEDIUM'    // 언더독 핫 + 큰 스프레드
+             WHEN line_inflated AND abs_spread >= 12 THEN 'LOW' // 라인 과대평가
+             ELSE 'NONE'
+           END AS upset_alert
 
-      // 5. 정규화
-      WITH g, home, away, h_pct, a_pct, h_net, a_net, h_flow, a_flow, raw_edge,
-           CASE WHEN raw_edge >= 50 THEN raw_edge ELSE 100 - raw_edge END AS edge,
-           CASE WHEN raw_edge >= 50 THEN home.abbr ELSE away.abbr END AS pick,
-           CASE WHEN raw_edge >= 50 THEN 'HOME' ELSE 'AWAY' END AS side,
-           CASE WHEN raw_edge >= 50 THEN h_flow ELSE a_flow END AS fav_flow
-
-      // 6. Signal 결정
-      WITH g, home, away, edge, pick, side, fav_flow, h_pct, a_pct, h_net, a_net,
-           CASE WHEN edge >= 65 AND edge < 80 AND fav_flow IN ['WARMING']
-                THEN true ELSE false END AS is_risky
+      // NONE 제외 (역배 경고 있는 경기만)
+      WHERE upset_alert <> 'NONE'
 
       RETURN
         g.date AS date,
         away.abbr AS away,
         home.abbr AS home,
-        round(edge, 1) AS edge_score,
-        pick AS recommended,
-        side,
-        fav_flow AS flow,
-        is_risky AS risky,
-        round(h_pct * 100) AS home_win_pct,
-        round(a_pct * 100) AS away_win_pct,
+        round(spread, 1) AS spread,
+        round(abs_spread, 1) AS abs_spread,
+        favorite,
+        fav_side,
+        underdog,
+        dog_side,
+        fav_flow,
+        dog_flow,
+        round(fav_net_edge, 1) AS fav_net_edge,
+        fav_slump,
+        dog_hot,
+        line_inflated,
+        upset_alert,
         round(h_net, 1) AS home_net_rtg,
         round(a_net, 1) AS away_net_rtg,
+        g.time_et AS time_et,
         g.status AS status,
         g.home_score AS home_score,
         g.away_score AS away_score
-      ORDER BY edge DESC
+      ORDER BY
+        CASE upset_alert
+          WHEN 'HIGH' THEN 1
+          WHEN 'MEDIUM' THEN 2
+          ELSE 3
+        END,
+        abs_spread DESC
     CYPHER
   end
 
-  # 쿼리 결과 파싱
+  # 쿼리 결과 파싱 v3.0 - 역배 알림 모드
   def parse_results(raw_results)
     raw_results.map do |r|
-      edge = r['edge_score'].to_f
-      signal = determine_signal(edge, r['risky'])
+      upset_alert = r['upset_alert']
+      signal = determine_upset_signal(upset_alert, r['fav_slump'], r['dog_hot'])
 
       {
         date: r['date'],
         matchup: "#{r['away']} @ #{r['home']}",
         away: r['away'],
         home: r['home'],
-        edge_score: edge,
-        recommended: r['recommended'],
-        side: r['side'],
-        flow: r['flow'],
-        risky: r['risky'],
+        spread: r['spread'].to_f,
+        abs_spread: r['abs_spread'].to_f,
+        favorite: r['favorite'],
+        fav_side: r['fav_side'],
+        underdog: r['underdog'],
+        dog_side: r['dog_side'],
+        fav_flow: r['fav_flow'],
+        dog_flow: r['dog_flow'],
+        fav_net_edge: r['fav_net_edge'].to_f,
+        fav_slump: r['fav_slump'],
+        dog_hot: r['dog_hot'],
+        line_inflated: r['line_inflated'],
+        upset_alert: upset_alert,
         signal: signal,
-        home_win_pct: r['home_win_pct'].to_i,
-        away_win_pct: r['away_win_pct'].to_i,
         home_net_rtg: r['home_net_rtg'].to_f,
         away_net_rtg: r['away_net_rtg'].to_f,
+        time_et: r['time_et'],
         status: r['status'],
         home_score: r['home_score'],
         away_score: r['away_score'],
-        actionable: edge >= THRESHOLDS[:bet] && !r['risky']
+        actionable: %w[HIGH MEDIUM].include?(upset_alert)
       }
     end
   end
 
-  # Signal 결정
+  # 역배 경고 Signal 결정 v3.0
+  def determine_upset_signal(upset_alert, fav_slump, dog_hot)
+    details = []
+    details << '페이보릿슬럼프' if fav_slump
+    details << '언더독핫' if dog_hot
+    detail_str = details.any? ? " (#{details.join('+')})" : ''
+
+    case upset_alert
+    when 'HIGH'
+      "🚨 역배경고#{detail_str}"
+    when 'MEDIUM'
+      "⚠️ 역배주의#{detail_str}"
+    when 'LOW'
+      "📊 역배관찰#{detail_str}"
+    else
+      '✅ 정상'
+    end
+  end
+
+  # 기존 함수 유지 (호환성)
   def determine_signal(edge, risky)
     return '🚨 RISKY' if risky && edge >= 65 && edge < 80
 

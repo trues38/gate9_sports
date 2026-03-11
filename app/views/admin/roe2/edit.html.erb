@@ -12,8 +12,8 @@
 
   <div class="text-sm text-gray-400 space-y-1 mb-3">
     <p><strong>Channel:</strong> <%= @extracted[:channel] %></p>
-    <p><strong>Duration:</strong> <%= @extracted[:duration] %></p>
-    <p><strong>Views:</strong> <%= number_with_delimiter(@extracted[:views]) %></p>
+    <% if @extracted[:duration] %><p><strong>Duration:</strong> <%= @extracted[:duration] %></p><% end %>
+    <% if @extracted[:views].to_i > 0 %><p><strong>Views:</strong> <%= number_with_delimiter(@extracted[:views]) %></p><% end %>
   </div>
 
   <% if @extracted[:description].present? %>
@@ -22,6 +22,34 @@
       <p class="text-sm text-gray-300 whitespace-pre-wrap max-h-40 overflow-y-auto"><%= @extracted[:description] %></p>
     </div>
   <% end %>
+
+  <!-- AI 자동 분석 버튼 -->
+  <div class="mt-4 pt-4 border-t border-gray-700">
+    <%= form_tag analyze_admin_roe2_index_path, method: :post, class: "flex items-center gap-3" do %>
+      <input type="hidden" name="url" value="<%= @extracted[:url] %>">
+      <input type="hidden" name="title" value="<%= @extracted[:title] %>">
+      <input type="hidden" name="description" value="<%= @extracted[:description] %>">
+      <input type="hidden" name="content" value="<%= @extracted[:content] %>">
+      <input type="hidden" name="channel" value="<%= @extracted[:channel] %>">
+      <input type="hidden" name="video_id" value="<%= @extracted[:video_id] %>">
+
+      <select name="team_hint" class="px-3 py-2 bg-gray-900 border border-gray-600 rounded text-sm">
+        <option value="">팀 힌트 (선택)</option>
+        <% @teams.each do |team| %>
+          <option value="<%= team %>"><%= team %></option>
+        <% end %>
+      </select>
+
+      <button type="submit" class="px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg font-medium text-sm transition flex items-center gap-2">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+        </svg>
+        AI Auto-Analyze
+      </button>
+
+      <span class="text-xs text-gray-500">OpenRouter (무료)</span>
+    <% end %>
+  </div>
 </div>
 
 <!-- 인사이트 입력 폼 -->
@@ -31,46 +59,54 @@
 
   <!-- NarrativeContext -->
   <div class="mb-6 p-4 bg-gray-800 rounded-xl border border-gray-700">
-    <h3 class="font-semibold mb-4 text-indigo-400">NarrativeContext (서사)</h3>
+    <div class="flex items-center justify-between mb-4">
+      <h3 class="font-semibold text-indigo-400">NarrativeContext (서사)</h3>
+      <% if @suggestions && @suggestions[:narratives].any? %>
+        <span class="px-2 py-1 bg-purple-600/30 text-purple-400 rounded text-xs">
+          AI 제안: <%= @suggestions[:narratives].length %>개
+        </span>
+      <% end %>
+    </div>
 
     <div id="narrative-contexts" class="space-y-4">
-      <div class="narrative-item p-4 bg-gray-900 rounded-lg border border-gray-600">
-        <div class="grid grid-cols-2 gap-4 mb-3">
-          <div>
-            <label class="block text-xs text-gray-400 mb-1">Type</label>
-            <select name="narrative_contexts[][type]" class="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded text-sm">
-              <option value="">Select type...</option>
-              <option value="Star Absence Impact">Star Absence Impact</option>
-              <option value="Player Emergence">Player Emergence</option>
-              <option value="Star Leadership">Star Leadership</option>
-              <option value="Schedule Context">Schedule Context</option>
-              <option value="Revenge Game">Revenge Game</option>
-              <option value="Milestone">Milestone</option>
-              <option value="Injury Return">Injury Return</option>
-              <option value="Team Chemistry">Team Chemistry</option>
-            </select>
+      <% narratives = @suggestions && @suggestions[:narratives].any? ? @suggestions[:narratives] : [{}] %>
+      <% narratives.each_with_index do |nc, idx| %>
+        <div class="narrative-item p-4 bg-gray-900 rounded-lg border border-gray-600 <%= nc[:type] ? 'border-purple-500/50' : '' %>">
+          <% if nc[:type] %>
+            <div class="mb-2 text-xs text-purple-400">AI 제안 #<%= idx + 1 %></div>
+          <% end %>
+          <div class="grid grid-cols-2 gap-4 mb-3">
+            <div>
+              <label class="block text-xs text-gray-400 mb-1">Type</label>
+              <select name="narrative_contexts[][type]" class="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded text-sm">
+                <option value="">Select type...</option>
+                <% ["Star Absence Impact", "Player Emergence", "Star Leadership", "Schedule Context", "Revenge Game", "Milestone", "Injury Return", "Team Chemistry"].each do |type| %>
+                  <option value="<%= type %>" <%= 'selected' if nc[:type] == type %>><%= type %></option>
+                <% end %>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs text-gray-400 mb-1">Team</label>
+              <select name="narrative_contexts[][team]" class="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded text-sm">
+                <option value="">Select team...</option>
+                <% @teams.each do |team| %>
+                  <option value="<%= team %>" <%= 'selected' if nc[:team] == team %>><%= team %></option>
+                <% end %>
+              </select>
+            </div>
           </div>
+
+          <div class="mb-3">
+            <label class="block text-xs text-gray-400 mb-1">Player (optional)</label>
+            <input type="text" name="narrative_contexts[][player]" value="<%= nc[:player] %>" placeholder="e.g., Nikola Jokic" class="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded text-sm">
+          </div>
+
           <div>
-            <label class="block text-xs text-gray-400 mb-1">Team</label>
-            <select name="narrative_contexts[][team]" class="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded text-sm">
-              <option value="">Select team...</option>
-              <% @teams.each do |team| %>
-                <option value="<%= team %>"><%= team %></option>
-              <% end %>
-            </select>
+            <label class="block text-xs text-gray-400 mb-1">Description</label>
+            <textarea name="narrative_contexts[][description]" rows="2" placeholder="인사이트 설명..." class="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded text-sm"><%= nc[:description] %></textarea>
           </div>
         </div>
-
-        <div class="mb-3">
-          <label class="block text-xs text-gray-400 mb-1">Player (optional)</label>
-          <input type="text" name="narrative_contexts[][player]" placeholder="e.g., Nikola Jokic" class="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded text-sm">
-        </div>
-
-        <div>
-          <label class="block text-xs text-gray-400 mb-1">Description</label>
-          <textarea name="narrative_contexts[][description]" rows="2" placeholder="인사이트 설명..." class="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded text-sm"></textarea>
-        </div>
-      </div>
+      <% end %>
     </div>
 
     <button type="button" onclick="addNarrativeContext()" class="mt-3 px-3 py-1 text-sm text-indigo-400 hover:text-indigo-300 border border-indigo-600 rounded">
@@ -80,54 +116,65 @@
 
   <!-- TacticalConcept -->
   <div class="mb-6 p-4 bg-gray-800 rounded-xl border border-gray-700">
-    <h3 class="font-semibold mb-4 text-purple-400">TacticalConcept (전술)</h3>
+    <div class="flex items-center justify-between mb-4">
+      <h3 class="font-semibold text-purple-400">TacticalConcept (전술)</h3>
+      <% if @suggestions && @suggestions[:tactics].any? %>
+        <span class="px-2 py-1 bg-purple-600/30 text-purple-400 rounded text-xs">
+          AI 제안: <%= @suggestions[:tactics].length %>개
+        </span>
+      <% end %>
+    </div>
 
     <div id="tactical-concepts" class="space-y-4">
-      <div class="tactical-item p-4 bg-gray-900 rounded-lg border border-gray-600">
-        <div class="grid grid-cols-2 gap-4 mb-3">
-          <div>
-            <label class="block text-xs text-gray-400 mb-1">Name</label>
-            <input type="text" name="tactical_concepts[][name]" placeholder="e.g., Gap Defense" class="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded text-sm">
+      <% tactics = @suggestions && @suggestions[:tactics].any? ? @suggestions[:tactics] : [{}] %>
+      <% tactics.each_with_index do |tc, idx| %>
+        <div class="tactical-item p-4 bg-gray-900 rounded-lg border border-gray-600 <%= tc[:name] ? 'border-purple-500/50' : '' %>">
+          <% if tc[:name] %>
+            <div class="mb-2 text-xs text-purple-400">AI 제안 #<%= idx + 1 %></div>
+          <% end %>
+          <div class="grid grid-cols-2 gap-4 mb-3">
+            <div>
+              <label class="block text-xs text-gray-400 mb-1">Name</label>
+              <input type="text" name="tactical_concepts[][name]" value="<%= tc[:name] %>" placeholder="e.g., Gap Defense" class="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded text-sm">
+            </div>
+            <div>
+              <label class="block text-xs text-gray-400 mb-1">Category</label>
+              <select name="tactical_concepts[][category]" class="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded text-sm">
+                <option value="">Select category...</option>
+                <% ["OFFENSE", "DEFENSE", "TRANSITION", "ROSTER_MANAGEMENT", "SPECIAL"].each do |cat| %>
+                  <option value="<%= cat %>" <%= 'selected' if tc[:category] == cat %>><%= cat %></option>
+                <% end %>
+              </select>
+            </div>
           </div>
-          <div>
-            <label class="block text-xs text-gray-400 mb-1">Category</label>
-            <select name="tactical_concepts[][category]" class="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded text-sm">
-              <option value="">Select category...</option>
-              <option value="OFFENSE">OFFENSE</option>
-              <option value="DEFENSE">DEFENSE</option>
-              <option value="TRANSITION">TRANSITION</option>
-              <option value="ROSTER_MANAGEMENT">ROSTER_MANAGEMENT</option>
-              <option value="SPECIAL">SPECIAL</option>
-            </select>
-          </div>
-        </div>
 
-        <div class="grid grid-cols-2 gap-4 mb-3">
-          <div>
-            <label class="block text-xs text-gray-400 mb-1">Team (optional)</label>
-            <select name="tactical_concepts[][team]" class="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded text-sm">
-              <option value="">Select team...</option>
-              <% @teams.each do |team| %>
-                <option value="<%= team %>"><%= team %></option>
-              <% end %>
-            </select>
+          <div class="grid grid-cols-2 gap-4 mb-3">
+            <div>
+              <label class="block text-xs text-gray-400 mb-1">Team (optional)</label>
+              <select name="tactical_concepts[][team]" class="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded text-sm">
+                <option value="">Select team...</option>
+                <% @teams.each do |team| %>
+                  <option value="<%= team %>" <%= 'selected' if tc[:team] == team %>><%= team %></option>
+                <% end %>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs text-gray-400 mb-1">Player (optional)</label>
+              <input type="text" name="tactical_concepts[][player]" value="<%= tc[:player] %>" placeholder="e.g., Shai Gilgeous-Alexander" class="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded text-sm">
+            </div>
           </div>
+
+          <div class="mb-3">
+            <label class="block text-xs text-gray-400 mb-1">Description</label>
+            <textarea name="tactical_concepts[][description]" rows="2" placeholder="전술 설명..." class="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded text-sm"><%= tc[:description] %></textarea>
+          </div>
+
           <div>
-            <label class="block text-xs text-gray-400 mb-1">Player (optional)</label>
-            <input type="text" name="tactical_concepts[][player]" placeholder="e.g., Shai Gilgeous-Alexander" class="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded text-sm">
+            <label class="block text-xs text-gray-400 mb-1">Mechanism (작동 원리)</label>
+            <textarea name="tactical_concepts[][mechanism]" rows="2" placeholder="어떻게 작동하는지..." class="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded text-sm"><%= tc[:mechanism] %></textarea>
           </div>
         </div>
-
-        <div class="mb-3">
-          <label class="block text-xs text-gray-400 mb-1">Description</label>
-          <textarea name="tactical_concepts[][description]" rows="2" placeholder="전술 설명..." class="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded text-sm"></textarea>
-        </div>
-
-        <div>
-          <label class="block text-xs text-gray-400 mb-1">Mechanism (작동 원리)</label>
-          <textarea name="tactical_concepts[][mechanism]" rows="2" placeholder="어떻게 작동하는지..." class="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded text-sm"></textarea>
-        </div>
-      </div>
+      <% end %>
     </div>
 
     <button type="button" onclick="addTacticalConcept()" class="mt-3 px-3 py-1 text-sm text-purple-400 hover:text-purple-300 border border-purple-600 rounded">
@@ -147,15 +194,88 @@
 <script>
 function addNarrativeContext() {
   const container = document.getElementById('narrative-contexts');
-  const template = container.querySelector('.narrative-item').cloneNode(true);
-  template.querySelectorAll('input, textarea, select').forEach(el => el.value = '');
-  container.appendChild(template);
+  const template = `
+    <div class="narrative-item p-4 bg-gray-900 rounded-lg border border-gray-600">
+      <div class="grid grid-cols-2 gap-4 mb-3">
+        <div>
+          <label class="block text-xs text-gray-400 mb-1">Type</label>
+          <select name="narrative_contexts[][type]" class="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded text-sm">
+            <option value="">Select type...</option>
+            <option value="Star Absence Impact">Star Absence Impact</option>
+            <option value="Player Emergence">Player Emergence</option>
+            <option value="Star Leadership">Star Leadership</option>
+            <option value="Schedule Context">Schedule Context</option>
+            <option value="Revenge Game">Revenge Game</option>
+            <option value="Milestone">Milestone</option>
+            <option value="Injury Return">Injury Return</option>
+            <option value="Team Chemistry">Team Chemistry</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs text-gray-400 mb-1">Team</label>
+          <select name="narrative_contexts[][team]" class="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded text-sm">
+            <option value="">Select team...</option>
+            <% @teams.each do |team| %><option value="<%= team %>"><%= team %></option><% end %>
+          </select>
+        </div>
+      </div>
+      <div class="mb-3">
+        <label class="block text-xs text-gray-400 mb-1">Player (optional)</label>
+        <input type="text" name="narrative_contexts[][player]" placeholder="e.g., Nikola Jokic" class="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded text-sm">
+      </div>
+      <div>
+        <label class="block text-xs text-gray-400 mb-1">Description</label>
+        <textarea name="narrative_contexts[][description]" rows="2" placeholder="인사이트 설명..." class="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded text-sm"></textarea>
+      </div>
+    </div>
+  `;
+  container.insertAdjacentHTML('beforeend', template);
 }
 
 function addTacticalConcept() {
   const container = document.getElementById('tactical-concepts');
-  const template = container.querySelector('.tactical-item').cloneNode(true);
-  template.querySelectorAll('input, textarea, select').forEach(el => el.value = '');
-  container.appendChild(template);
+  const template = `
+    <div class="tactical-item p-4 bg-gray-900 rounded-lg border border-gray-600">
+      <div class="grid grid-cols-2 gap-4 mb-3">
+        <div>
+          <label class="block text-xs text-gray-400 mb-1">Name</label>
+          <input type="text" name="tactical_concepts[][name]" placeholder="e.g., Gap Defense" class="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded text-sm">
+        </div>
+        <div>
+          <label class="block text-xs text-gray-400 mb-1">Category</label>
+          <select name="tactical_concepts[][category]" class="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded text-sm">
+            <option value="">Select category...</option>
+            <option value="OFFENSE">OFFENSE</option>
+            <option value="DEFENSE">DEFENSE</option>
+            <option value="TRANSITION">TRANSITION</option>
+            <option value="ROSTER_MANAGEMENT">ROSTER_MANAGEMENT</option>
+            <option value="SPECIAL">SPECIAL</option>
+          </select>
+        </div>
+      </div>
+      <div class="grid grid-cols-2 gap-4 mb-3">
+        <div>
+          <label class="block text-xs text-gray-400 mb-1">Team (optional)</label>
+          <select name="tactical_concepts[][team]" class="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded text-sm">
+            <option value="">Select team...</option>
+            <% @teams.each do |team| %><option value="<%= team %>"><%= team %></option><% end %>
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs text-gray-400 mb-1">Player (optional)</label>
+          <input type="text" name="tactical_concepts[][player]" placeholder="e.g., Shai Gilgeous-Alexander" class="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded text-sm">
+        </div>
+      </div>
+      <div class="mb-3">
+        <label class="block text-xs text-gray-400 mb-1">Description</label>
+        <textarea name="tactical_concepts[][description]" rows="2" placeholder="전술 설명..." class="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded text-sm"></textarea>
+      </div>
+      <div>
+        <label class="block text-xs text-gray-400 mb-1">Mechanism (작동 원리)</label>
+        <textarea name="tactical_concepts[][mechanism]" rows="2" placeholder="어떻게 작동하는지..." class="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded text-sm"></textarea>
+      </div>
+    </div>
+  `;
+  container.insertAdjacentHTML('beforeend', template);
 }
 </script>

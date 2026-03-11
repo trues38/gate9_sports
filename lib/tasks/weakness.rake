@@ -270,7 +270,9 @@ namespace :weakness do
     end
 
     # Neo4j connection
-    uri = URI("http://86.48.2.202:7474/db/neo4j/tx/commit")
+    neo4j_host = ENV.fetch("NEO4J_HOST", "193.46.243.3")
+    neo4j_port = ENV.fetch("NEO4J_PORT", "7474")
+    uri = URI("http://#{neo4j_host}:#{neo4j_port}/db/neo4j/tx/commit")
 
     team_stats.each do |team, triggers|
       triggers.each do |trigger_type, stats|

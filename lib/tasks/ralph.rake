@@ -1,223 +1,350 @@
 # frozen_string_literal: true
 
-# RALPH System - Recursive Autonomous Learning & Prediction Helper
+# RALPH v2.0 - Recursive Autonomous Learning & Prediction Helper
 #
-# 주간 자동화 사이클:
-# 1. 완료된 경기 결과 평가
-# 2. 분석가별 정확도 재계산 (rolling 8주)
-# 3. 가중치 자동 조정
+# 시그널/트리거 기반 자체검증 시스템
 #
-# 실행: 매주 월요일 15:00 KST (06:00 UTC)
+# 주간 사이클:
+# 1. 경기 결과 기록 (ralph:record)
+# 2. 트리거별 승률 분석 (ralph:trigger_stats)
+# 3. 시그널별 검증 (ralph:signal_stats)
+# 4. 신뢰도 캘리브레이션 (ralph:calibration)
+# 5. 피드백 출력 (ralph:feedback)
+#
+# 실행: 매주 월요일 또는 수동
 #
 namespace :ralph do
-  desc 'RALPH 전체 사이클 실행 (평가 → 계산 → 조정)'
+  desc 'RALPH v2.0 전체 사이클 (결과기록 → 분석 → 피드백)'
   task cycle: :environment do
     puts "=" * 60
-    puts "🤖 RALPH System - Weekly Cycle"
-    puts "   Started at: #{Time.current.in_time_zone('Asia/Seoul').strftime('%Y-%m-%d %H:%M KST')}"
+    puts "🤖 RALPH v2.0 - Weekly Cycle"
+    puts "   Started: #{Time.current.in_time_zone('Asia/Seoul').strftime('%Y-%m-%d %H:%M KST')}"
     puts "=" * 60
 
-    Rake::Task['ralph:evaluate'].invoke
-    Rake::Task['ralph:calculate'].invoke
-    Rake::Task['ralph:adjust'].invoke
+    Rake::Task['ralph:record'].invoke
+    Rake::Task['ralph:trigger_stats'].invoke
+    Rake::Task['ralph:signal_stats'].invoke
+    Rake::Task['ralph:calibration'].invoke
+    Rake::Task['ralph:feedback'].invoke
 
-    puts "\n✅ RALPH cycle completed!"
+    puts "\n✅ RALPH v2.0 cycle completed!"
   end
 
-  desc '완료된 경기 결과 평가'
-  task evaluate: :environment do
-    puts "\n📊 Step 1: Evaluating completed games..."
+  desc '경기 결과 자동 기록'
+  task record: :environment do
+    puts "\n📊 Step 1: Recording game results..."
 
-    # Find reports with results but unevaluated picks
-    reports = Report.joins(:analyst_picks)
-                    .where.not(result: [nil, 'pending'])
-                    .where(analyst_picks: { correct: nil })
-                    .distinct
+    # 결과 미기록 + 경기 종료된 보고서 찾기
+    pending_reports = Report.joins(:game)
+                            .where(result: [nil, 'pending'])
+                            .where('games.game_date < ?', Time.current - 3.hours)
 
-    evaluated_count = 0
-    reports.find_each do |report|
-      AnalystPick.evaluate_for_report(report)
-      evaluated_count += 1
-      print '.'
-    end
+    recorded = 0
+    pending_reports.find_each do |report|
+      game = report.game
 
-    puts "\n   ✓ Evaluated #{evaluated_count} reports"
-  end
+      # 스코어가 있으면 결과 계산
+      if game.home_score.present? && game.away_score.present?
+        result = report.calculate_result_from_scores(game.home_score, game.away_score)
 
-  desc '분석가별 정확도 계산 (rolling 8주)'
-  task calculate: :environment do
-    puts "\n📈 Step 2: Calculating analyst accuracy (rolling 8 weeks)..."
-
-    # Rolling 8-week window
-    end_date = Date.current
-    start_date = end_date - 8.weeks
-
-    accuracy_results = AnalystPick.accuracy_all(
-      start_date: start_date,
-      end_date: end_date
-    )
-
-    puts "\n   Analyst Performance (#{start_date} ~ #{end_date}):"
-    puts "   " + "-" * 50
-
-    accuracy_results.each do |analyst, data|
-      pct = (data[:accuracy] * 100).round(1)
-      bar = '█' * (pct / 5).to_i + '░' * (20 - (pct / 5).to_i)
-      puts "   #{analyst.ljust(12)} #{data[:correct]}/#{data[:total]} (#{pct}%) #{bar}"
-    end
-
-    # Store in instance variable for adjust task
-    @accuracy_results = accuracy_results
-  end
-
-  desc '가중치 자동 조정'
-  task adjust: :environment do
-    puts "\n⚖️  Step 3: Adjusting analyst weights..."
-
-    # Recalculate if not already done
-    unless @accuracy_results
-      end_date = Date.current
-      start_date = end_date - 8.weeks
-      @accuracy_results = AnalystPick.accuracy_all(
-        start_date: start_date,
-        end_date: end_date
-      )
-    end
-
-    adjustments = []
-
-    @accuracy_results.each do |analyst, data|
-      accuracy = data[:accuracy]
-      sample_size = data[:total]
-
-      # Skip if insufficient sample size
-      if sample_size < 10
-        puts "   #{analyst}: Skipped (sample size #{sample_size} < 10)"
-        next
+        if result
+          report.record_result!(result,
+            home_score: game.home_score,
+            away_score: game.away_score
+          )
+          recorded += 1
+          print result == 'win' ? '✓' : (result == 'loss' ? '✗' : '—')
+        end
       end
+    end
 
-      aw = AnalystWeight.find_or_initialize_by(analyst_name: analyst)
-      old_accuracy = aw.accuracy
-      old_weight = aw.weight
+    puts "\n   ✓ Recorded #{recorded} results"
+  end
 
-      # Update accuracy
-      aw.accuracy = accuracy
-      aw.sample_size = sample_size
-      aw.last_backtest_date = Date.current
+  desc '트리거별 승률 분석 (8주 롤링)'
+  task trigger_stats: :environment do
+    puts "\n📈 Step 2: Trigger Performance Analysis..."
 
-      # Calculate new weight based on accuracy
-      new_weight = case accuracy
-                   when 0.60.. then 1.0
-                   when 0.55..0.60 then 0.7
-                   when 0.50..0.55 then 0.3
-                   when 0.45..0.50 then -0.3
-                   else -0.5
-                   end
+    start_date = 8.weeks.ago.to_date
+    reports = Report.with_result
+                    .where('published_at >= ?', start_date)
+                    .where.not(structured_data: [nil, ''])
 
-      # Determine signal type
-      new_signal_type = case new_weight
-                        when 0.8.. then 'main'
-                        when 0.5..0.8 then 'secondary'
-                        when -0.5..0.5 then 'neutral'
-                        else 'reverse'
-                        end
+    trigger_stats = Hash.new { |h, k| h[k] = { wins: 0, losses: 0, pushes: 0 } }
 
-      aw.weight = new_weight
-      aw.signal_type = new_signal_type
-      aw.notes = "RALPH auto-adjusted: #{Date.current}"
-      aw.save!
+    reports.find_each do |r|
+      data = parse_structured_data(r.structured_data)
+      next unless data
 
-      # Track changes
-      weight_change = old_weight ? (new_weight - old_weight).round(2) : new_weight
-      adjustments << {
-        analyst: analyst,
-        accuracy: accuracy,
-        old_weight: old_weight,
-        new_weight: new_weight,
-        change: weight_change
+      triggers = data['triggers'] || []
+      triggers.each do |trigger|
+        case r.result
+        when 'win' then trigger_stats[trigger][:wins] += 1
+        when 'loss' then trigger_stats[trigger][:losses] += 1
+        when 'push' then trigger_stats[trigger][:pushes] += 1
+        end
+      end
+    end
+
+    puts "\n   Trigger Performance (#{start_date} ~ today):"
+    puts "   " + "-" * 55
+
+    # 정렬: 승률 높은 순
+    sorted = trigger_stats.sort_by do |_, v|
+      total = v[:wins] + v[:losses]
+      total > 0 ? -(v[:wins].to_f / total) : 0
+    end
+
+    sorted.each do |trigger, stats|
+      total = stats[:wins] + stats[:losses]
+      next if total < 3  # 최소 샘플
+
+      win_rate = (stats[:wins].to_f / total * 100).round(1)
+      emoji = win_rate >= 60 ? '🔥' : (win_rate >= 50 ? '✅' : '❌')
+      bar = '█' * (win_rate / 5).to_i + '░' * (20 - (win_rate / 5).to_i)
+
+      puts "   #{emoji} #{trigger.ljust(20)} #{stats[:wins]}/#{total} (#{win_rate}%) #{bar}"
+    end
+
+    @trigger_stats = trigger_stats
+  end
+
+  desc '백테스트 시그널별 검증'
+  task signal_stats: :environment do
+    puts "\n📊 Step 3: Signal Performance Validation..."
+
+    start_date = 8.weeks.ago.to_date
+    reports = Report.with_result
+                    .where('published_at >= ?', start_date)
+                    .where.not(structured_data: [nil, ''])
+
+    signal_stats = Hash.new { |h, k| h[k] = { wins: 0, losses: 0, pushes: 0 } }
+
+    reports.find_each do |r|
+      data = parse_structured_data(r.structured_data)
+      next unless data
+
+      signals = data['signals'] || []
+      signals.each do |signal|
+        case r.result
+        when 'win' then signal_stats[signal][:wins] += 1
+        when 'loss' then signal_stats[signal][:losses] += 1
+        when 'push' then signal_stats[signal][:pushes] += 1
+        end
+      end
+    end
+
+    puts "\n   Backtest Signal Validation:"
+    puts "   " + "-" * 55
+
+    # 백테스트 기준 승률과 비교
+    backtest_benchmarks = {
+      'HIGH_EDGE_ML' => 79.4,
+      'MID_EDGE_ML' => 66.9,
+      'HIGH_EDGE_LOW_RISK' => 78.4,
+      'STRONG_UP_FLOW' => 54.4,
+      'COLLAPSE_FADE' => 53.1,
+      'HOME_BIG_DOG' => 52.9,
+      'LOW_TOTAL_UNDER' => 58.2
+    }
+
+    sorted = signal_stats.sort_by do |_, v|
+      total = v[:wins] + v[:losses]
+      total > 0 ? -(v[:wins].to_f / total) : 0
+    end
+
+    sorted.each do |signal, stats|
+      total = stats[:wins] + stats[:losses]
+      next if total < 3
+
+      actual_rate = (stats[:wins].to_f / total * 100).round(1)
+      benchmark = backtest_benchmarks[signal]
+
+      if benchmark
+        diff = actual_rate - benchmark
+        status = diff >= -5 ? '✅' : '⚠️'
+        puts "   #{status} #{signal.ljust(20)} #{stats[:wins]}/#{total} (#{actual_rate}%) [기준: #{benchmark}%, #{diff >= 0 ? '+' : ''}#{diff.round(1)}%]"
+      else
+        emoji = actual_rate >= 55 ? '✅' : '❓'
+        puts "   #{emoji} #{signal.ljust(20)} #{stats[:wins]}/#{total} (#{actual_rate}%) [기준 없음]"
+      end
+    end
+
+    @signal_stats = signal_stats
+  end
+
+  desc '신뢰도 캘리브레이션'
+  task calibration: :environment do
+    puts "\n⭐ Step 4: Confidence Calibration..."
+
+    start_date = 8.weeks.ago.to_date
+
+    puts "\n   Expected vs Actual Win Rate:"
+    puts "   " + "-" * 55
+
+    # 신뢰도별 예상 승률 (1⭐=40%, 2⭐=50%, 3⭐=60%, 4⭐=70%, 5⭐=80%)
+    expected_rates = { 1 => 40, 2 => 50, 3 => 60, 4 => 70, 5 => 80 }
+    calibration_results = {}
+
+    (1..5).each do |conf|
+      reports = Report.where(confidence: conf)
+                      .where('published_at >= ?', start_date)
+                      .with_result
+
+      total = reports.count
+      next if total < 3
+
+      wins = reports.wins.count
+      actual_rate = (wins.to_f / total * 100).round(1)
+      expected = expected_rates[conf]
+      diff = actual_rate - expected
+
+      stars = '⭐' * conf + '☆' * (5 - conf)
+      status = diff.abs <= 10 ? '✅' : (diff < -10 ? '⚠️' : '🔥')
+
+      puts "   #{status} #{stars} 예상 #{expected}% vs 실제 #{actual_rate}% (#{wins}/#{total}) [#{diff >= 0 ? '+' : ''}#{diff.round(0)}%]"
+
+      calibration_results[conf] = {
+        expected: expected,
+        actual: actual_rate,
+        diff: diff,
+        sample: total
       }
     end
 
-    puts "\n   Weight Adjustments:"
-    puts "   " + "-" * 50
-
-    adjustments.each do |adj|
-      change_str = adj[:old_weight] ? "#{adj[:old_weight]} → #{adj[:new_weight]}" : "NEW: #{adj[:new_weight]}"
-      direction = adj[:change] > 0 ? '↑' : (adj[:change] < 0 ? '↓' : '→')
-      puts "   #{adj[:analyst].ljust(12)} #{change_str} #{direction} (acc: #{(adj[:accuracy] * 100).round(1)}%)"
-    end
-
-    puts "\n   ✓ Updated #{adjustments.length} analyst weights"
+    @calibration_results = calibration_results
   end
 
-  desc '현재 분석가 가중치 상태 확인'
+  desc '피드백 및 권장사항 출력'
+  task feedback: :environment do
+    puts "\n💡 Step 5: Feedback & Recommendations..."
+    puts "   " + "-" * 55
+
+    recommendations = []
+
+    # 트리거 피드백
+    if @trigger_stats
+      @trigger_stats.each do |trigger, stats|
+        total = stats[:wins] + stats[:losses]
+        next if total < 5
+
+        win_rate = stats[:wins].to_f / total * 100
+
+        if win_rate >= 65
+          recommendations << "🔥 #{trigger}: 승률 #{win_rate.round(1)}% → 적극 활용, 신뢰도 +0.5⭐"
+        elsif win_rate < 45
+          recommendations << "⚠️ #{trigger}: 승률 #{win_rate.round(1)}% → 주의 필요, 신뢰도 -0.5⭐"
+        end
+      end
+    end
+
+    # 시그널 피드백
+    if @signal_stats
+      backtest_benchmarks = {
+        'HIGH_EDGE_ML' => 79.4,
+        'MID_EDGE_ML' => 66.9,
+        'HIGH_EDGE_LOW_RISK' => 78.4
+      }
+
+      @signal_stats.each do |signal, stats|
+        total = stats[:wins] + stats[:losses]
+        next if total < 5
+
+        actual_rate = stats[:wins].to_f / total * 100
+        benchmark = backtest_benchmarks[signal]
+
+        if benchmark && actual_rate < benchmark - 15
+          recommendations << "❌ #{signal}: 실제 #{actual_rate.round(1)}% < 기준 #{benchmark}% → 시그널 재검토 필요"
+        end
+      end
+    end
+
+    # 캘리브레이션 피드백
+    if @calibration_results
+      @calibration_results.each do |conf, data|
+        if data[:diff] < -15
+          recommendations << "📉 #{conf}⭐ 과대평가: 실제 #{data[:actual]}% < 예상 #{data[:expected]}% → 기준 하향 검토"
+        elsif data[:diff] > 15
+          recommendations << "📈 #{conf}⭐ 과소평가: 실제 #{data[:actual]}% > 예상 #{data[:expected]}% → 기준 상향 검토"
+        end
+      end
+    end
+
+    if recommendations.any?
+      puts "\n   📋 Next Report Recommendations:"
+      recommendations.each { |r| puts "   #{r}" }
+    else
+      puts "\n   ✅ 현재 시스템 캘리브레이션 양호"
+    end
+
+    # 요약 저장 (JSON)
+    save_feedback_summary(recommendations)
+  end
+
+  desc '현재 상태 요약'
   task status: :environment do
-    puts "\n📋 Current Analyst Weights:"
-    puts "-" * 60
+    puts "\n📋 RALPH v2.0 Status"
+    puts "=" * 60
 
-    AnalystWeight.order(weight: :desc).each do |aw|
-      signal_emoji = case aw.signal_type
-                     when 'main' then '⭐'
-                     when 'secondary' then '📊'
-                     when 'reverse' then '🔄'
-                     else '📌'
-                     end
+    # 최근 성과
+    recent = Report.where('published_at >= ?', 2.weeks.ago).with_result
+    total = recent.count
+    wins = recent.wins.count
 
-      puts "#{signal_emoji} #{aw.analyst_name.ljust(12)} " \
-           "Weight: #{format('%+.1f', aw.weight || 0).rjust(4)} | " \
-           "Accuracy: #{((aw.accuracy || 0) * 100).round(1)}% | " \
-           "Samples: #{aw.sample_size || 0} | " \
-           "Type: #{aw.signal_type}"
+    if total > 0
+      puts "\n   최근 2주 성과: #{wins}/#{total} (#{(wins.to_f / total * 100).round(1)}%)"
     end
 
-    puts "-" * 60
-    puts "Last updated: #{AnalystWeight.maximum(:last_backtest_date) || 'Never'}"
+    # 결과 미기록 보고서
+    pending = Report.where(result: [nil, 'pending'])
+                    .joins(:game)
+                    .where('games.game_date < ?', Time.current - 3.hours)
+                    .count
+
+    puts "   결과 미기록: #{pending}개" if pending > 0
+
+    # 최근 피드백
+    feedback_file = Rails.root.join('tmp', 'ralph_feedback.json')
+    if File.exist?(feedback_file)
+      feedback = JSON.parse(File.read(feedback_file))
+      puts "\n   최근 피드백 (#{feedback['generated_at']}):"
+      feedback['recommendations']&.first(3)&.each { |r| puts "   #{r}" }
+    end
+
+    puts "=" * 60
   end
 
-  desc '특정 기간 분석가 성과 리포트'
-  task :report, [:weeks] => :environment do |_, args|
-    weeks = (args[:weeks] || 8).to_i
-    end_date = Date.current
-    start_date = end_date - weeks.weeks
+  private
 
-    puts "\n📊 Analyst Performance Report"
-    puts "   Period: #{start_date} ~ #{end_date} (#{weeks} weeks)"
-    puts "=" * 60
+  def parse_structured_data(data)
+    return nil if data.blank?
 
-    results = AnalystPick.accuracy_all(start_date: start_date, end_date: end_date)
-
-    if results.empty?
-      puts "   No data available for this period."
-      return
+    case data
+    when String
+      JSON.parse(data) rescue nil
+    when Hash
+      data
+    else
+      nil
     end
+  end
 
-    # Sort by accuracy
-    sorted = results.sort_by { |_, v| -v[:accuracy] }
+  def save_feedback_summary(recommendations)
+    feedback = {
+      generated_at: Time.current.iso8601,
+      recommendations: recommendations,
+      trigger_stats: @trigger_stats&.transform_values { |v|
+        total = v[:wins] + v[:losses]
+        { wins: v[:wins], total: total, rate: total > 0 ? (v[:wins].to_f / total * 100).round(1) : 0 }
+      },
+      signal_stats: @signal_stats&.transform_values { |v|
+        total = v[:wins] + v[:losses]
+        { wins: v[:wins], total: total, rate: total > 0 ? (v[:wins].to_f / total * 100).round(1) : 0 }
+      },
+      calibration: @calibration_results
+    }
 
-    puts "\n   Ranking:"
-    sorted.each_with_index do |(analyst, data), idx|
-      pct = (data[:accuracy] * 100).round(1)
-      medal = case idx
-              when 0 then '🥇'
-              when 1 then '🥈'
-              when 2 then '🥉'
-              else '  '
-              end
-      puts "   #{medal} #{(idx + 1).to_s.rjust(2)}. #{analyst.ljust(12)} #{data[:correct]}/#{data[:total]} (#{pct}%)"
-    end
-
-    # Best combination analysis
-    puts "\n   Optimal Combinations:"
-
-    # CONTRARIAN + anti-SHARP
-    contrarian_data = results['CONTRARIAN']
-    sharp_data = results['SHARP']
-
-    if contrarian_data && sharp_data
-      # When CONTRARIAN and SHARP disagree, CONTRARIAN wins
-      puts "   • CONTRARIAN + anti-SHARP: Theoretical advantage when signals diverge"
-    end
-
-    puts "=" * 60
+    File.write(Rails.root.join('tmp', 'ralph_feedback.json'), JSON.pretty_generate(feedback))
+    puts "\n   📁 Feedback saved to tmp/ralph_feedback.json"
   end
 end

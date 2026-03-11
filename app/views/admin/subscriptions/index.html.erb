@@ -1,0 +1,74 @@
+<div class="space-y-8">
+  <div>
+    <h1 class="text-2xl font-bold mb-2">Payment Requests</h1>
+    <p class="text-sm text-gray-400">`pending_payment` 상태 요청을 승인하거나 반려합니다.</p>
+  </div>
+
+  <div class="bg-gray-800 rounded-xl border border-gray-700 overflow-hidden">
+    <div class="px-4 py-3 border-b border-gray-700">
+      <h2 class="font-semibold text-white">Pending Requests</h2>
+    </div>
+    <table class="w-full">
+      <thead class="bg-gray-700/50">
+        <tr>
+          <th class="text-left px-4 py-3 text-sm font-medium text-gray-400">User</th>
+          <th class="text-left px-4 py-3 text-sm font-medium text-gray-400">Plan</th>
+          <th class="text-left px-4 py-3 text-sm font-medium text-gray-400">Requested</th>
+          <th class="text-left px-4 py-3 text-sm font-medium text-gray-400">Source</th>
+          <th class="text-right px-4 py-3 text-sm font-medium text-gray-400">Actions</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-700">
+        <% @pending_subscriptions.each do |subscription| %>
+          <tr class="hover:bg-gray-700/20">
+            <td class="px-4 py-3">
+              <div class="font-medium text-white"><%= subscription.user.email %></div>
+              <div class="text-xs text-gray-500"><%= subscription.user.name.presence || "이름 없음" %></div>
+            </td>
+            <td class="px-4 py-3">
+              <div class="text-white font-medium"><%= subscription.plan_name %></div>
+              <div class="text-xs text-gray-500"><%= number_to_currency(subscription.amount, unit: "₩", precision: 0) %></div>
+            </td>
+            <td class="px-4 py-3 text-sm text-gray-300">
+              <%= subscription.payment_requested_at&.in_time_zone("Asia/Seoul")&.strftime("%Y-%m-%d %H:%M") %>
+            </td>
+            <td class="px-4 py-3 text-xs text-gray-400 max-w-xs">
+              <%= subscription.request_metadata.to_h["source_path"].presence || "직접 진입" %>
+            </td>
+            <td class="px-4 py-3 text-right">
+              <div class="inline-flex items-center gap-2">
+                <%= button_to "Approve", approve_admin_subscription_path(subscription), method: :post, class: "px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 rounded-lg text-sm font-semibold" %>
+                <%= button_to "Reject", reject_admin_subscription_path(subscription), method: :post, class: "px-3 py-1.5 bg-red-600/80 hover:bg-red-500 rounded-lg text-sm font-semibold" %>
+              </div>
+            </td>
+          </tr>
+        <% end %>
+        <% if @pending_subscriptions.empty? %>
+          <tr>
+            <td colspan="5" class="px-4 py-10 text-center text-gray-500">대기 중인 결제 요청이 없습니다.</td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="bg-gray-800 rounded-xl border border-gray-700 overflow-hidden">
+    <div class="px-4 py-3 border-b border-gray-700">
+      <h2 class="font-semibold text-white">Recently Reviewed</h2>
+    </div>
+    <div class="divide-y divide-gray-700">
+      <% @recently_reviewed.each do |subscription| %>
+        <div class="px-4 py-3 flex items-center justify-between gap-4">
+          <div>
+            <div class="font-medium text-white"><%= subscription.user.email %></div>
+            <div class="text-sm text-gray-400"><%= subscription.plan_name %> · <%= number_to_currency(subscription.amount, unit: "₩", precision: 0) %></div>
+          </div>
+          <div class="text-right">
+            <div class="text-sm <%= subscription.active? ? 'text-emerald-400' : 'text-gray-300' %>"><%= subscription.status %></div>
+            <div class="text-xs text-gray-500"><%= subscription.reviewed_at&.in_time_zone("Asia/Seoul")&.strftime("%Y-%m-%d %H:%M") %></div>
+          </div>
+        </div>
+      <% end %>
+    </div>
+  </div>
+</div>

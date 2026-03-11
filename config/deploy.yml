@@ -7,7 +7,7 @@ image: trues38/gate9_sports
 # Deploy to these servers.
 servers:
   web:
-    - 86.48.2.202
+    - 193.46.243.3
   # job:
   #   hosts:
   #     - 192.168.0.1
@@ -39,10 +39,14 @@ env:
   secret:
     - RAILS_MASTER_KEY
     - ADMIN_TOKEN
+    - API_TOKEN
+    - TELEGRAM_BOT_TOKEN
+    - TELEGRAM_CHANNEL_ID
   clear:
     # Run the Solid Queue Supervisor inside the web server's Puma process to do jobs.
     # When you start using multiple servers, you should split out job processing to a dedicated machine.
     SOLID_QUEUE_IN_PUMA: true
+    ADCRAFT_TASKS_ENDPOINT: http://adcraft-web:5001/api/generate
 
     # Set number of processes dedicated to Solid Queue (default: 1)
     # JOB_CONCURRENCY: 3
@@ -91,8 +95,10 @@ builder:
   #   - RAILS_MASTER_KEY
 
 # Use a different ssh user than root
-# ssh:
-#   user: app
+ssh:
+  user: root
+  keys:
+    - ~/.ssh/id_ed25519_sonoai
 
 # Use accessory services (secrets come from .kamal/secrets).
 # accessories:

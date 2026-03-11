@@ -1,291 +1,125 @@
-<%= turbo_stream_from "live_scores" %>
-<div class="px-4 py-4"
-     data-controller="auto-refresh"
-     data-auto-refresh-game-times-value="<%= @games.map { |g| (g.game_date.to_f * 1000).to_i }.to_json %>">
-  <!-- Date Navigation -->
-  <div class="flex items-center justify-between mb-4">
-    <%= link_to schedule_index_index_path(sport: current_sport&.slug, date: @yesterday, filter: @filter),
-        class: "p-2 rounded-lg bg-gray-800 light:bg-gray-100" do %>
-      <iconify-icon icon="solar:arrow-left-linear" width="20" class="text-gray-400"></iconify-icon>
-    <% end %>
-
-    <div class="text-center">
-      <div class="text-lg font-bold light:text-gray-900">
-        <% if @selected_date == Date.current %>
-          <%= t('schedule.today', default: 'Today') %>
-        <% elsif @selected_date == Date.current - 1.day %>
-          <%= t('schedule.yesterday', default: 'Yesterday') %>
-        <% elsif @selected_date == Date.current + 1.day %>
-          <%= t('schedule.tomorrow', default: 'Tomorrow') %>
-        <% else %>
-          <%= @selected_date.strftime("%m/%d") %>
+<div class="space-y-6 pb-12">
+  <!-- Date Navigation / Terminal Header -->
+  <div class="terminal-container rounded-md">
+    <div class="terminal-header">
+      <span><%= t('terminal.analysis_schedule', default: 'G9 ANALYSIS SCHEDULE') %></span>
+      <span class="text-neutral"><%= t('terminal.scanning_date', default: 'SCANNING_DATE') %>: <%= @selected_date.strftime("%Y-%m-%d") %></span>
+    </div>
+    
+    <div class="flex items-center justify-between p-2 bg-black/5 dark:bg-white/[0.02]">
+      <div class="flex gap-2 p-1 glass-panel rounded-lg">
+        <% [
+          [Date.current - 1.day, t('schedule.yesterday', default: 'PREV')],
+          [Date.current, t('schedule.today', default: 'LIVE')],
+          [Date.current + 1.day, t('schedule.tomorrow', default: 'NEXT')]
+        ].each do |date, label| %>
+          <% is_selected = @selected_date == date %>
+          <%= link_to schedule_index_index_path(sport: current_sport&.slug, date: date, filter: @filter),
+              class: "px-6 py-1.5 rounded text-[10px] font-mono font-black uppercase transition-all #{is_selected ? 'bg-primary text-white shadow-md' : 'text-th-muted hover:text-th-heading hover:bg-white/5'}" do %>
+            <%= label %>
+          <% end %>
         <% end %>
       </div>
-      <div class="text-xs text-gray-500"><%= @selected_date.strftime("%Y.%m.%d (%a)") %></div>
-    </div>
 
-    <%= link_to schedule_index_index_path(sport: current_sport&.slug, date: @tomorrow, filter: @filter),
-        class: "p-2 rounded-lg bg-gray-800 light:bg-gray-100" do %>
-      <iconify-icon icon="solar:arrow-right-linear" width="20" class="text-gray-400"></iconify-icon>
-    <% end %>
+      <div class="flex items-center gap-4 px-4">
+        <%= link_to schedule_index_index_path(sport: current_sport&.slug, date: @yesterday, filter: @filter), class: "text-th-muted hover:text-primary transition" do %>
+          <iconify-icon icon="solar:alt-arrow-left-bold" width="18"></iconify-icon>
+        <% end %>
+        <span class="text-xs font-mono font-bold text-th-heading"><%= @selected_date.strftime("%b %d, %Y") %></span>
+        <%= link_to schedule_index_index_path(sport: current_sport&.slug, date: @tomorrow, filter: @filter), class: "text-th-muted hover:text-primary transition" do %>
+          <iconify-icon icon="solar:alt-arrow-right-bold" width="18"></iconify-icon>
+        <% end %>
+      </div>
+    </div>
   </div>
 
-  <!-- Quick Date Tabs -->
-  <div class="flex gap-2 mb-4 justify-center">
-    <% [
-      [Date.current - 1.day, t('schedule.yesterday', default: 'Yesterday')],
-      [Date.current, t('schedule.today', default: 'Today')],
-      [Date.current + 1.day, t('schedule.tomorrow', default: 'Tomorrow')]
-    ].each do |date, label| %>
-      <%= link_to schedule_index_index_path(sport: current_sport&.slug, date: date, filter: @filter),
-          class: "px-4 py-2 rounded-full text-sm #{@selected_date == date ? 'bg-indigo-600 text-white' : 'bg-gray-800 light:bg-gray-100 text-gray-400 light:text-gray-600'}" do %>
-        <%= label %>
+  <!-- Global League Filter -->
+  <div class="flex items-center gap-4 px-1 border-b border-[var(--th-border)] pb-1">
+    <%= link_to schedule_index_index_path(sport: current_sport&.slug, date: @selected_date), class: "pb-3 px-1 border-b-2 font-mono text-[10px] font-black uppercase tracking-widest transition-all #{params[:league].blank? ? 'border-primary text-primary' : 'border-transparent text-th-muted hover:text-th-heading'}" do %>
+      <%= t('terminal.all_streams', default: 'ALL_STREAMS') %>
+    <% end %>
+    <% available_leagues.each do |league| %>
+      <% is_active = params[:league] == league[:slug] %>
+      <%= link_to schedule_index_index_path(sport: current_sport&.slug, date: @selected_date, league: league[:slug]), class: "pb-3 px-1 border-b-2 font-mono text-[10px] font-black uppercase tracking-widest transition-all #{is_active ? 'border-primary text-primary' : 'border-transparent text-th-muted hover:text-th-heading'}" do %>
+        <%= league[:slug].upcase %>
       <% end %>
     <% end %>
   </div>
 
-  <!-- Games Count -->
-  <div class="text-center text-sm text-gray-500 mb-4">
-    <%= @total_games %> <%= t('schedule.games', default: 'games') %>
+  <!-- Bloomberg Style Schedule Grid -->
+  <div class="terminal-container rounded-lg border-2 border-[var(--th-border)]">
+    <table class="w-full text-left border-collapse">
+      <thead class="bg-[var(--th-border)]/10 text-[9px] font-mono text-th-muted uppercase tracking-widest border-b border-[var(--th-border)]">
+        <tr>
+          <th class="px-4 py-3 font-bold w-20"><%= t('terminal.status', default: 'STATUS') %></th>
+          <th class="px-4 py-3 font-bold w-20 text-center"><%= t('terminal.time', default: 'TIME') %></th>
+          <th class="px-4 py-3 font-bold"><%= t('terminal.matchup', default: 'MATCHUP') %></th>
+          <th class="px-4 py-3 font-bold text-center"><%= t('terminal.line', default: 'LINE') %></th>
+          <th class="px-4 py-3 font-bold text-center"><%= t('terminal.total', default: 'TOTAL') %></th>
+          <th class="px-4 py-3 font-bold text-center"><%= t('terminal.intel_level', default: 'CONFIDENCE') %></th>
+          <th class="px-4 py-3 font-bold text-right"><%= t('terminal.action', default: 'ACTION') %></th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-[var(--th-border)] font-mono">
+        <% if @games.any? %>
+          <% @games.each do |game| %>
+            <tr class="data-row transition-colors">
+              <td class="px-4 py-4">
+                <% if game.status == 'finished' %>
+                  <span class="text-[9px] font-black px-1.5 py-0.5 rounded bg-white/5 text-th-muted border border-white/10 uppercase"><%= t('terminal.final', default: 'FINAL') %></span>
+                <% else %>
+                  <span class="text-[9px] font-black px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 uppercase animate-pulse"><%= t('terminal.live', default: 'LIVE') %></span>
+                <% end %>
+              </td>
+              <td class="px-4 py-4 text-center">
+                <span class="text-[10px] text-th-heading font-bold"><%= game.game_date.strftime("%H:%M") %></span>
+              </td>
+              <td class="px-4 py-4">
+                <div class="flex items-center gap-3">
+                  <span class="text-sm font-bold text-th-heading tracking-tighter uppercase"><%= game.away_abbr %> @ <%= game.home_abbr %></span>
+                  <% if game.schedule_note.present? %>
+                    <span class="text-[8px] px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-500 font-black">!</span>
+                  <% end %>
+                </div>
+              </td>
+              <td class="px-4 py-4 text-center">
+                <span class="text-xs text-neutral font-bold"><%= game.home_spread.present? ? (game.home_spread > 0 ? "+#{game.home_spread}" : game.home_spread) : '--' %></span>
+              </td>
+              <td class="px-4 py-4 text-center">
+                <span class="text-xs text-alert font-bold"><%= game.total_line || '--' %></span>
+              </td>
+              <td class="px-4 py-4 text-center">
+                <% report = game.reports.published.last %>
+                <% if report %>
+                  <div class="flex gap-0.5 justify-center">
+                    <% (report.confidence.to_i.zero? ? 3 : report.confidence.to_i).times do %>
+                      <div class="w-1 h-1 bg-positive rounded-full"></div>
+                    <% end %>
+                  </div>
+                <% else %>
+                  <span class="text-[8px] text-th-muted/40"><%= t('terminal.no_data', default: 'NO_DATA') %></span>
+                <% end %>
+              </td>
+              <td class="px-4 py-4 text-right">
+                <% if report %>
+                  <%= link_to report_path(report, sport: current_sport&.slug), class: "inline-block px-3 py-1 rounded-sm border border-primary/30 text-primary text-[9px] font-black uppercase hover:bg-primary hover:text-white transition-all" do %>
+                    <%= t('terminal.read_intel', default: 'READ_INTEL') %>
+                  <% end %>
+                <% else %>
+                  <span class="text-[9px] text-th-muted/30 font-bold uppercase tracking-widest italic"><%= t('terminal.queued', default: 'QUEUED') %></span>
+                <% end %>
+              </td>
+            </tr>
+          <% end %>
+        <% else %>
+          <tr>
+            <td colspan="7" class="px-4 py-24 text-center opacity-30">
+              <iconify-icon icon="solar:ghost-bold-duotone" width="32" class="mb-2 mx-auto"></iconify-icon>
+              <div class="text-[10px] font-black uppercase tracking-[0.3em]"><%= t('terminal.no_flux_data', default: 'No data found') %></div>
+            </td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
   </div>
-
-  <!-- Games List -->
-  <% if @games.any? %>
-    <div class="space-y-3">
-      <% @games.each do |game| %>
-        <% status = game_status(game) %>
-        <div class="<%= status == :finished ? 'opacity-50' : '' %> bg-gray-900 light:bg-white rounded-xl border border-gray-800 light:border-gray-200 light:shadow-sm overflow-hidden"
-             data-controller="toggle">
-          <!-- Main Card (clickable) -->
-          <div class="p-4 cursor-pointer" data-action="click->toggle#toggle">
-            <!-- Time & Status (centered) -->
-            <div class="text-center text-xs mb-3">
-              <% if I18n.locale == :ko %>
-                <span class="text-gray-500"><%= game.game_date.in_time_zone("Asia/Seoul").strftime("%H:%M") %> KST</span>
-              <% else %>
-                <span class="text-gray-500"><%= game.game_date.in_time_zone("America/New_York").strftime("%I:%M %p") %> ET</span>
-              <% end %>
-              <% if status == :live %>
-                <span class="ml-2 px-2 py-0.5 bg-red-500 text-white rounded-full text-[10px] font-bold animate-pulse">LIVE</span>
-              <% end %>
-            </div>
-
-            <!-- Teams with Edge & Spread -->
-            <div id="game_<%= game.id %>" class="flex items-center">
-              <!-- Away Team -->
-              <div class="flex-1 text-center">
-                <div class="h-5 mb-1">
-                  <% if game.away_edge.present? %>
-                    <span class="px-2 py-0.5 bg-red-500/20 text-red-400 rounded-full text-[10px]"><%= game.away_edge %></span>
-                  <% end %>
-                </div>
-                <div class="text-xl font-bold light:text-gray-900"><%= game.away_abbr %></div>
-                <% if status == :live || status == :finished %>
-                  <div class="text-2xl font-bold <%= status == :live ? 'text-yellow-400' : 'text-gray-400' %> mt-1">
-                    <%= game.away_score || 0 %>
-                  </div>
-                <% else %>
-                  <div class="text-sm text-indigo-400 font-medium mt-1">
-                    <%= game.away_spread.present? ? (game.away_spread > 0 ? "+#{game.away_spread}" : game.away_spread) : "-" %>
-                  </div>
-                <% end %>
-                <% if game.away_record.present? %>
-                  <div class="text-[10px] text-gray-500 mt-1"><%= game.away_record %></div>
-                <% end %>
-              </div>
-
-              <!-- VS / Total / Clock -->
-              <div class="px-3 text-center w-16">
-                <% if status == :live %>
-                  <div class="text-yellow-400 font-bold text-sm">
-                    Q<%= game.period || '-' %>
-                  </div>
-                  <div class="text-yellow-400 text-xs mt-1">
-                    <%= game.clock || '-' %>
-                  </div>
-                <% elsif status == :finished %>
-                  <div class="text-gray-500 text-sm"><%= I18n.locale == :ko ? '종료' : 'Final' %></div>
-                <% else %>
-                  <div class="text-gray-500 text-sm">
-                    <% if I18n.locale == :ko %>
-                      <%= game.game_date.in_time_zone("Asia/Seoul").strftime("%H:%M") %>
-                    <% else %>
-                      <%= game.game_date.in_time_zone("America/New_York").strftime("%I:%M") %>
-                    <% end %>
-                  </div>
-                  <div class="text-xs text-gray-600 mt-1">
-                    <%= game.total_line.present? ? "O/U #{game.total_line}" : "-" %>
-                  </div>
-                <% end %>
-              </div>
-
-              <!-- Home Team -->
-              <div class="flex-1 text-center">
-                <div class="h-5 mb-1">
-                  <% if game.home_edge.present? %>
-                    <span class="px-2 py-0.5 bg-red-500/20 text-red-400 rounded-full text-[10px]"><%= game.home_edge %></span>
-                  <% end %>
-                </div>
-                <div class="text-xl font-bold light:text-gray-900"><%= game.home_abbr %></div>
-                <% if status == :live || status == :finished %>
-                  <div class="text-2xl font-bold <%= status == :live ? 'text-yellow-400' : 'text-gray-400' %> mt-1">
-                    <%= game.home_score || 0 %>
-                  </div>
-                <% else %>
-                  <div class="text-sm text-indigo-400 font-medium mt-1">
-                    <%= game.home_spread.present? ? (game.home_spread > 0 ? "+#{game.home_spread}" : game.home_spread) : "-" %>
-                  </div>
-                <% end %>
-                <% if game.home_record.present? %>
-                  <div class="text-[10px] text-gray-500 mt-1"><%= game.home_record %></div>
-                <% end %>
-              </div>
-            </div>
-
-            <!-- Expand indicator -->
-            <div class="text-center mt-3">
-              <iconify-icon icon="solar:alt-arrow-down-linear" width="16" class="text-gray-600"></iconify-icon>
-            </div>
-          </div>
-
-          <!-- Expanded Details (hidden by default) -->
-          <div class="hidden border-t border-gray-800 light:border-gray-200 p-4 bg-gray-800/50 light:bg-gray-50"
-               data-toggle-target="content">
-            <!-- Team Records -->
-            <% if game.away_record.present? || game.home_record.present? %>
-              <div class="mb-3 p-3 bg-gray-900/50 light:bg-gray-100 rounded-lg">
-                <div class="text-xs font-medium text-blue-400 mb-2">
-                  <iconify-icon icon="solar:chart-linear" width="12" class="mr-1"></iconify-icon>
-                  Season Record
-                </div>
-                <div class="grid grid-cols-3 gap-2 text-xs text-center">
-                  <div>
-                    <div class="text-white light:text-gray-900 font-bold"><%= game.away_record || '-' %></div>
-                    <div class="text-gray-500">Overall</div>
-                    <div class="text-gray-400 text-[10px]"><%= game.away_road_record ? "Away #{game.away_road_record}" : '' %></div>
-                  </div>
-                  <div>
-                    <% if game.h2h_summary.present? %>
-                      <div class="text-yellow-400 font-medium text-[10px]"><%= game.h2h_summary %></div>
-                    <% else %>
-                      <div class="text-gray-600">vs</div>
-                    <% end %>
-                  </div>
-                  <div>
-                    <div class="text-white light:text-gray-900 font-bold"><%= game.home_record || '-' %></div>
-                    <div class="text-gray-500">Overall</div>
-                    <div class="text-gray-400 text-[10px]"><%= game.home_home_record ? "Home #{game.home_home_record}" : '' %></div>
-                  </div>
-                </div>
-              </div>
-            <% end %>
-
-            <!-- Venue -->
-            <div class="text-sm text-gray-400 light:text-gray-500 mb-3">
-              <iconify-icon icon="solar:map-point-linear" width="14" class="mr-1"></iconify-icon>
-              <%= game.venue %>
-            </div>
-
-            <!-- Team Full Names -->
-            <div class="flex justify-between text-sm text-gray-500 mb-3">
-              <span><%= game.away_team %></span>
-              <span><%= game.home_team %></span>
-            </div>
-
-            <!-- Key Injuries -->
-            <% away_injuries = key_injuries_for_team(game.away_abbr) %>
-            <% home_injuries = key_injuries_for_team(game.home_abbr) %>
-            <% if away_injuries.any? || home_injuries.any? %>
-              <div class="mb-3 p-3 bg-gray-900/50 light:bg-gray-100 rounded-lg">
-                <div class="text-xs font-medium text-orange-400 mb-2">
-                  <iconify-icon icon="solar:health-broken" width="12" class="mr-1"></iconify-icon>
-                  <%= t('schedule.key_injuries', default: 'Key Injuries') %>
-                </div>
-                <div class="grid grid-cols-2 gap-2 text-xs">
-                  <div>
-                    <% away_injuries.first(3).each do |injury| %>
-                      <div class="text-gray-400 light:text-gray-600">
-                        <span class="text-white light:text-gray-900"><%= injury["player"] %></span>
-                        <span class="text-orange-400">(<%= injury["status"] %>)</span>
-                      </div>
-                    <% end %>
-                    <% if away_injuries.empty? %>
-                      <span class="text-gray-600">-</span>
-                    <% end %>
-                  </div>
-                  <div class="text-right">
-                    <% home_injuries.first(3).each do |injury| %>
-                      <div class="text-gray-400 light:text-gray-600">
-                        <span class="text-white light:text-gray-900"><%= injury["player"] %></span>
-                        <span class="text-orange-400">(<%= injury["status"] %>)</span>
-                      </div>
-                    <% end %>
-                    <% if home_injuries.empty? %>
-                      <span class="text-gray-600">-</span>
-                    <% end %>
-                  </div>
-                </div>
-              </div>
-            <% end %>
-
-            <!-- Projected Lineups -->
-            <% away_lineup = lineup_for_team(game.away_abbr) %>
-            <% home_lineup = lineup_for_team(game.home_abbr) %>
-            <% if away_lineup.any? || home_lineup.any? %>
-              <div class="mb-3 p-3 bg-gray-900/50 light:bg-gray-100 rounded-lg">
-                <div class="text-xs font-medium text-indigo-400 mb-2">
-                  <iconify-icon icon="solar:users-group-rounded-linear" width="12" class="mr-1"></iconify-icon>
-                  <%= t('schedule.projected_lineup', default: 'Projected Lineup') %>
-                </div>
-                <div class="grid grid-cols-2 gap-4 text-xs">
-                  <div>
-                    <% if away_lineup.any? %>
-                      <% away_lineup.each do |player| %>
-                        <div class="flex justify-between items-center">
-                          <span class="<%= player['status'] == 'OUT' ? 'text-red-400 line-through' : 'text-white light:text-gray-900' %>">
-                            <%= player["name"] %><% if player["status"].present? %><span class="<%= player['status'] == 'OUT' ? 'text-red-400' : 'text-orange-400' %> text-[10px] ml-1">(<%= player["status"] %>)</span><% end %>
-                          </span>
-                          <span class="text-gray-500 ml-1"><%= player["position"] %></span>
-                        </div>
-                      <% end %>
-                    <% else %>
-                      <span class="text-gray-600">TBD</span>
-                    <% end %>
-                  </div>
-                  <div>
-                    <% if home_lineup.any? %>
-                      <% home_lineup.each do |player| %>
-                        <div class="flex justify-between items-center">
-                          <span class="<%= player['status'] == 'OUT' ? 'text-red-400 line-through' : 'text-white light:text-gray-900' %>">
-                            <%= player["name"] %><% if player["status"].present? %><span class="<%= player['status'] == 'OUT' ? 'text-red-400' : 'text-orange-400' %> text-[10px] ml-1">(<%= player["status"] %>)</span><% end %>
-                          </span>
-                          <span class="text-gray-500 ml-1"><%= player["position"] %></span>
-                        </div>
-                      <% end %>
-                    <% else %>
-                      <span class="text-gray-600">TBD</span>
-                    <% end %>
-                  </div>
-                </div>
-              </div>
-            <% end %>
-
-            <!-- Report Link (if exists) -->
-            <% report = game.reports.published.last %>
-            <% if report %>
-              <%= link_to report_path(report, sport: current_sport&.slug),
-                  class: "block w-full text-center py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium transition" do %>
-                <%= t('schedule.view_report', default: 'View Report') %>
-              <% end %>
-            <% end %>
-          </div>
-        </div>
-      <% end %>
-    </div>
-  <% else %>
-    <div class="bg-gray-900 light:bg-white rounded-xl p-12 text-center border border-gray-800 light:border-gray-200">
-      <iconify-icon icon="solar:calendar-linear" width="48" class="text-gray-700 light:text-gray-300 mx-auto mb-4"></iconify-icon>
-      <p class="text-gray-500"><%= t('schedule.no_games', default: 'No games') %></p>
-    </div>
-  <% end %>
 </div>

@@ -5,7 +5,7 @@
 # ROE-2 파이프라인:
 # 1. YouTube URL 입력
 # 2. 콘텐츠 추출
-# 3. 인사이트 정리 (수동)
+# 3. AI 자동 분석 (OpenRouter) 또는 수동 입력
 # 4. Neo4j 업로드
 #
 class Admin::Roe2Controller < Admin::BaseController
@@ -25,12 +25,45 @@ class Admin::Roe2Controller < Admin::BaseController
 
     begin
       @extracted = YouTubeExtractor.extract(@url)
+      @suggestions = { narratives: [], tactics: [] }
       @teams = fetch_teams
       render :edit
     rescue YouTubeExtractor::ExtractionError => e
       flash[:error] = "추출 실패: #{e.message}"
       redirect_to new_admin_roe2_path
     end
+  end
+
+  # POST /admin/roe2/analyze - AI 자동 분석
+  def analyze
+    @url = params[:url]
+    @extracted = {
+      url: @url,
+      title: params[:title],
+      description: params[:description],
+      content: params[:content],
+      channel: params[:channel],
+      video_id: params[:video_id]
+    }
+    @teams = fetch_teams
+
+    begin
+      client = OpenRouterClient.new
+      @suggestions = client.analyze_insights(params[:content], team_hint: params[:team_hint])
+
+      if @suggestions[:error]
+        flash.now[:warning] = "AI 분석 실패: #{@suggestions[:error]} - 수동 입력하세요"
+      elsif @suggestions[:parse_error]
+        flash.now[:warning] = "AI 응답 파싱 실패 - 수동 입력하세요"
+      else
+        flash.now[:success] = "AI 분석 완료! #{@suggestions[:narratives].length}개 서사 + #{@suggestions[:tactics].length}개 전술 발견"
+      end
+    rescue StandardError => e
+      @suggestions = { narratives: [], tactics: [] }
+      flash.now[:error] = "AI 분석 오류: #{e.message}"
+    end
+
+    render :edit
   end
 
   # POST /admin/roe2

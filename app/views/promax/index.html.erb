@@ -1,0 +1,155 @@
+<div class="space-y-6">
+  <!-- Date Navigation (Glass Pill) -->
+  <div class="glass-panel light:bg-white light:border-gray-200 light:shadow-sm rounded-full p-2 flex items-center justify-between sticky top-[130px] z-30 backdrop-blur-md transition-colors">
+    <%= link_to promax_path(sport: (params[:sport] || 'basketball'), date: @yesterday, filter: @filter),
+        class: "p-3 rounded-full hover:bg-white/10 light:hover:bg-gray-100 transition-colors group" do %>
+      <iconify-icon icon="solar:arrow-left-linear" width="20" class="text-gray-400 group-hover:text-white light:group-hover:text-gray-900 transition-colors"></iconify-icon>
+    <% end %>
+
+    <div class="text-center">
+      <div class="text-lg font-bold text-transparent bg-clip-text bg-gradient-to-r from-white to-gray-400 light:from-gray-900 light:to-gray-600">
+        <% if @selected_date == Date.current %>
+          Today
+        <% elsif @selected_date == Date.current - 1.day %>
+          Yesterday
+        <% elsif @selected_date == Date.current + 1.day %>
+          Tomorrow
+        <% else %>
+          <%= @selected_date.strftime("%m/%d") %>
+        <% end %>
+      </div>
+      <div class="text-xs text-gray-500 font-medium tracking-wide"><%= @selected_date.strftime("%Y.%m.%d (%a)") %></div>
+    </div>
+
+    <%= link_to promax_path(sport: (params[:sport] || 'basketball'), date: @tomorrow, filter: @filter),
+        class: "p-3 rounded-full hover:bg-white/10 light:hover:bg-gray-100 transition-colors group" do %>
+      <iconify-icon icon="solar:arrow-right-linear" width="20" class="text-gray-400 group-hover:text-white light:group-hover:text-gray-900 transition-colors"></iconify-icon>
+    <% end %>
+  </div>
+
+  <!-- Quick Date Tabs -->
+  <div class="flex justify-center gap-3">
+    <% [Date.current - 1.day, Date.current, Date.current + 1.day].each do |date| %>
+      <% is_active = @selected_date == date %>
+      <%= link_to promax_path(sport: (params[:sport] || 'basketball'), date: date, filter: @filter),
+          class: "px-4 py-1.5 rounded-full text-xs font-medium transition-all duration-300 border #{is_active ? 'bg-neon-blue/20 light:bg-indigo-100 border-neon-blue light:border-indigo-500 text-neon-blue light:text-indigo-700 shadow-[0_0_10px_rgba(59,130,246,0.3)] light:shadow-none' : 'border-transparent text-gray-500 hover:text-gray-300 light:hover:text-gray-700 hover:bg-white/5 light:hover:bg-gray-100'}" do %>
+        <%= date == Date.current ? 'Today' : date.strftime("%a") %>
+      <% end %>
+    <% end %>
+  </div>
+
+  <!-- Games List -->
+  <% if @games.any? %>
+    <div class="grid gap-4">
+      <% @games.each_with_index do |game, index| %>
+        <% status = game_status(game) %>
+        <!-- Card -->
+        <div class="glass-panel light:bg-white light:border-gray-200 light:shadow-md rounded-2xl overflow-hidden hover:border-neon-purple/50 light:hover:border-indigo-300 transition-all duration-300 hover:-translate-y-1 group"
+             style="animation-delay: <%= index * 100 %>ms; animation: fade-in-up 0.6s ease-out backwards;"
+             data-controller="toggle">
+          
+          <!-- Main Content -->
+          <div class="p-5 cursor-pointer relative" data-action="click->toggle#toggle">
+            <!-- Glow effect on hover (Dark only) -->
+            <div class="absolute inset-0 bg-gradient-to-r from-neon-blue/0 via-neon-purple/5 to-neon-blue/0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none light:hidden"></div>
+
+            <!-- Time -->
+            <div class="text-center mb-4">
+              <span class="px-3 py-1 rounded-full bg-black/40 light:bg-gray-100 text-[10px] font-medium text-gray-400 light:text-gray-600 border border-white/5 light:border-gray-200">
+                <%= game.game_date.in_time_zone("Asia/Seoul").strftime("%H:%M") %> KST
+              </span>
+            </div>
+
+            <div class="flex items-center justify-between relative z-10">
+              <!-- Away Team -->
+              <div class="flex-1 flex flex-col items-center">
+                 <% if game.away_edge.present? %>
+                    <span class="mb-2 px-2 py-0.5 bg-red-500/10 light:bg-red-50 text-red-400 light:text-red-600 border border-red-500/20 light:border-red-200 rounded text-[10px] font-bold tracking-wider">
+                        <%= game.away_edge %>
+                    </span>
+                 <% end %>
+                 <span class="text-2xl font-black text-white light:text-gray-900 tracking-tight drop-shadow-lg light:drop-shadow-none"><%= game.away_abbr %></span>
+                 <% if status == :finished %>
+                    <span class="text-3xl font-bold text-gray-500 light:text-gray-400 mt-2"><%= game.away_score %></span>
+                 <% else %>
+                    <span class="text-sm font-semibold text-neon-cyan light:text-indigo-600 mt-1"><%= game.away_spread&.positive? ? "+#{game.away_spread}" : game.away_spread %></span>
+                 <% end %>
+              </div>
+
+              <!-- VS Divider -->
+              <div class="px-4 flex flex-col items-center">
+                <% if status == :finished %>
+                    <span class="text-xs text-gray-600 font-medium">FINAL</span>
+                <% else %>
+                    <span class="text-xs text-gray-600 font-bold mb-1">VS</span>
+                    <div class="text-[10px] text-gray-500 border border-gray-700 light:border-gray-300 rounded px-1.5 py-0.5">
+                        O/U <%= game.total_line %>
+                    </div>
+                <% end %>
+              </div>
+
+              <!-- Home Team -->
+              <div class="flex-1 flex flex-col items-center">
+                 <% if game.home_edge.present? %>
+                    <span class="mb-2 px-2 py-0.5 bg-red-500/10 light:bg-red-50 text-red-400 light:text-red-600 border border-red-500/20 light:border-red-200 rounded text-[10px] font-bold tracking-wider">
+                        <%= game.home_edge %>
+                    </span>
+                 <% end %>
+                 <span class="text-2xl font-black text-white light:text-gray-900 tracking-tight drop-shadow-lg light:drop-shadow-none"><%= game.home_abbr %></span>
+                 <% if status == :finished %>
+                    <span class="text-3xl font-bold text-gray-500 light:text-gray-400 mt-2"><%= game.home_score %></span>
+                 <% else %>
+                    <span class="text-sm font-semibold text-neon-cyan light:text-indigo-600 mt-1"><%= game.home_spread&.positive? ? "+#{game.home_spread}" : game.home_spread %></span>
+                 <% end %>
+              </div>
+            </div>
+
+            <!-- Expand Arrow -->
+            <div class="mt-4 flex justify-center">
+                <iconify-icon icon="solar:alt-arrow-down-linear" class="text-gray-600 light:text-gray-400 group-hover:text-neon-purple light:group-hover:text-indigo-500 transition-colors duration-300"></iconify-icon>
+            </div>
+          </div>
+
+          <!-- Expanded Details -->
+          <div class="hidden border-t border-white/5 light:border-gray-100 bg-black/20 light:bg-gray-50 backdrop-blur-md light:backdrop-blur-none" data-toggle-target="content">
+             <div class="p-4 space-y-4">
+                <!-- Info Grid -->
+                <div class="grid grid-cols-2 gap-3 text-xs">
+                    <div class="p-3 rounded-xl bg-white/5 light:bg-white border border-white/5 light:border-gray-200">
+                        <div class="text-gray-500 mb-1">Venue</div>
+                        <div class="text-gray-300 light:text-gray-800 font-medium"><%= game.venue %></div>
+                    </div>
+                    <div class="p-3 rounded-xl bg-white/5 light:bg-white border border-white/5 light:border-gray-200">
+                        <div class="text-gray-500 mb-1">Matchup</div>
+                        <div class="text-yellow-400 light:text-yellow-600 font-medium"><%= game.h2h_summary || 'No data' %></div>
+                    </div>
+                </div>
+
+                <!-- Report Button -->
+                <% if (report = game.reports.published.last) %>
+                    <%= link_to report_path(report, sport: (params[:sport] || 'basketball')), class: "block w-full py-3 rounded-xl bg-gradient-to-r from-neon-blue to-neon-purple light:from-indigo-600 light:to-purple-600 text-white text-center text-sm font-bold shadow-lg shadow-neon-blue/20 light:shadow-indigo-500/30 hover:shadow-neon-blue/40 transition-shadow" do %>
+                        View Analysis Report
+                    <% end %>
+                <% end %>
+             </div>
+          </div>
+        </div>
+      <% end %>
+    </div>
+  <% else %>
+    <div class="glass-panel light:bg-white light:border-gray-200 light:shadow-sm rounded-2xl p-12 text-center flex flex-col items-center justify-center min-h-[300px]">
+        <div class="w-16 h-16 rounded-full bg-white/5 light:bg-gray-100 flex items-center justify-center mb-4 animate-pulse">
+            <iconify-icon icon="solar:calendar-linear" width="32" class="text-gray-500"></iconify-icon>
+        </div>
+        <h3 class="text-gray-300 light:text-gray-900 font-medium text-lg">No games scheduled</h3>
+        <p class="text-gray-600 text-sm mt-1">Check back tomorrow!</p>
+    </div>
+  <% end %>
+</div>
+
+<style>
+@keyframes fade-in-up {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+</style>

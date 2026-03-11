@@ -1,6 +1,7 @@
 class Game < ApplicationRecord
   belongs_to :sport
   has_many :reports, dependent: :destroy
+  has_many :picks, dependent: :destroy
   has_one :game_result, dependent: :destroy
 
   validates :home_team, presence: true

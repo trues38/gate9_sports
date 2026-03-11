@@ -1,5 +1,6 @@
 class Insight < ApplicationRecord
   belongs_to :sport
+  belongs_to :report, optional: true
 
   validates :title, presence: true
   validates :content, presence: true

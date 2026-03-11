@@ -107,7 +107,7 @@ class Api::ReportsController < Api::BaseController
     params.permit(
       :game_id, :title, :content, :pick, :confidence, :free,
       :pick_type, :pick_line, :pick_side, :stake, :analyst_consensus,
-      structured_data: {}
+      structured_data: [:edge_score, :away_flow, :home_flow, :away_regime, :home_regime, :notes, triggers: [], signals: []]
     )
   end
 

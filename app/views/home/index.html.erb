@@ -1,121 +1,158 @@
-<div class="px-4 py-4 space-y-6">
-  <!-- Schedule Edge Alert -->
-  <% if @edge_games&.any? %>
-    <section>
-      <div class="flex justify-between items-center mb-3">
-        <h2 class="text-lg font-semibold light:text-gray-900">
-          <iconify-icon icon="solar:danger-triangle-bold" width="18" class="text-amber-500 mr-1"></iconify-icon>
-          <%= t('home.edge_alert', default: 'Schedule Edge') %>
-        </h2>
-        <%= link_to schedule_index_index_path(sport: current_sport&.slug, filter: "edge"), class: "text-sm text-indigo-500" do %>
-          <%= t('home.see_all') %>
+<%= render 'hero' %>
+
+<%= render 'waitlist' %>
+
+<div class="space-y-12 animate-fade-in">
+
+  <!-- Market Control Header -->
+  <div class="flex flex-col md:flex-row md:items-end justify-between gap-8 px-2">
+    <div class="space-y-2">
+      <h2 class="text-4xl font-display font-black tracking-tighter text-[var(--th-heading)] uppercase leading-none neon-text">
+        <%= t('home.main_headline', default: 'ANALYSIS MATRIX') %>
+      </h2>
+      <p class="text-sm font-medium text-slate-500 max-w-xl">
+        <%= t('home.alpha_extraction', default: 'Real-time AI analysis and predictions') %>. 
+        <%= t('home.session_state', default: 'Current system state') %>: <span class="text-emerald-500 font-mono font-bold">LIVE</span>
+      </p>
+    </div>
+    
+    <!-- Date Navigation -->
+    <div class="flex items-center gap-2 bg-black/5 dark:bg-white/5 p-1.5 rounded-2xl border border-[var(--th-border)]">
+      <div class="flex items-center">
+        <%= link_to root_path(sport: current_sport&.slug, date: @yesterday), class: "w-10 h-10 flex items-center justify-center rounded-xl hover:bg-white/10 transition-all text-slate-500 hover:text-white" do %>
+          <iconify-icon icon="solar:alt-arrow-left-bold" width="20"></iconify-icon>
+        <% end %>
+        
+        <div class="px-4 py-2 bg-[var(--bg-card)] rounded-xl border border-[var(--th-border)] shadow-sm min-w-[140px] text-center">
+          <span class="text-xs font-black text-[var(--th-heading)] font-mono tracking-widest"><%= @selected_date.strftime("%Y.%m.%d") %></span>
+        </div>
+
+        <%= link_to root_path(sport: current_sport&.slug, date: @tomorrow), class: "w-10 h-10 flex items-center justify-center rounded-xl hover:bg-white/10 transition-all text-slate-500 hover:text-white" do %>
+          <iconify-icon icon="solar:alt-arrow-right-bold" width="20"></iconify-icon>
         <% end %>
       </div>
-      <div class="space-y-2">
-        <% @edge_games.each do |game| %>
-          <div class="bg-gray-900 light:bg-white rounded-xl p-3 border border-gray-800 light:border-gray-200 light:shadow-sm">
-            <div class="flex justify-between items-center">
-              <div>
-                <span class="text-xs text-gray-500"><%= game.game_date.strftime("%m/%d %H:%M") %></span>
-                <div class="font-medium light:text-gray-900"><%= game.away_abbr %> @ <%= game.home_abbr %></div>
-              </div>
-              <div class="flex gap-1">
-                <% if game.schedule_note&.include?("B2B") %>
-                  <span class="px-2 py-1 bg-red-500/20 text-red-400 light:bg-red-100 light:text-red-600 text-xs rounded-full font-medium">B2B</span>
-                <% end %>
-                <% if game.schedule_note&.include?("3in4") %>
-                  <span class="px-2 py-1 bg-amber-500/20 text-amber-400 light:bg-amber-100 light:text-amber-600 text-xs rounded-full font-medium">3in4</span>
-                <% end %>
-              </div>
-            </div>
-          </div>
-        <% end %>
+      
+      <div class="h-6 w-px bg-[var(--th-border)] mx-1"></div>
+
+      <%= link_to root_path(sport: current_sport&.slug, date: Date.current), class: "px-4 py-2 rounded-xl text-[10px] font-black uppercase transition-all #{@selected_date == Date.current ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'bg-transparent text-slate-500 hover:text-white hover:bg-white/5 border border-transparent'}" do %>
+        Today
+      <% end %>
+    </div>
+  </div>
+
+  <div class="flex flex-col md:flex-row gap-6">
+    <div class="flex-1">
+      <% if @recent_results.any? %>
+        <div class="glass-card rounded-2xl px-4 py-3 flex flex-wrap items-center gap-3 h-full">
+          <span class="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em]"><%= t('home.recent_hits', default: 'RECENT HITS') %></span>
+          <% @recent_results.each do |result_report| %>
+            <% result_style =
+              case result_report.result
+              when "win" then "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
+              when "loss" then "bg-rose-500/10 text-rose-400 border-rose-500/20"
+              else "bg-slate-500/10 text-slate-300 border-slate-500/20"
+              end %>
+            <span class="px-3 py-1 rounded-full border text-[10px] font-black uppercase <%= result_style %>">
+              <%= result_report.result&.upcase %> · <%= result_report.game&.display_name&.truncate(15) || "Report" %>
+            </span>
+          <% end %>
+        </div>
+      <% end %>
+    </div>
+
+    <div class="flex gap-4">
+      <div class="glass-card px-8 py-4 rounded-2xl flex flex-col items-center min-w-[140px] border-emerald-500/20">
+        <span class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1"><%= t('home.win_rate', default: 'Win Rate') %></span>
+        <span class="text-3xl font-display font-black text-emerald-500"><%= number_with_precision(@report_performance[:win_rate], precision: 1) %>%</span>
       </div>
-    </section>
+      <div class="glass-card px-8 py-4 rounded-2xl flex flex-col items-center min-w-[140px] border-primary/20">
+        <span class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1"><%= t('home.roi', default: 'ROI') %></span>
+        <span class="text-3xl font-display font-black text-primary"><%= number_with_precision(@report_performance[:roi], precision: 1) %>%</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Regional Clusters (Bloomberg Logic in Adcraft Style) -->
+  <% if @games.any? %>
+    <% @games.group_by { |g| g.league_name.presence || current_sport&.name }.each do |league_name, games| %>
+      <section class="space-y-8 mt-16">
+        <div class="flex items-center gap-4 px-2">
+          <div class="w-2 h-2 bg-primary transform rotate-45"></div>
+          <h3 class="text-sm font-black text-[var(--th-heading)] uppercase tracking-[0.4em] font-display"><%= league_name %></h3>
+          <div class="flex-1 h-px bg-gradient-to-r from-[var(--th-border)] to-transparent"></div>
+        </div>
+
+        <div class="glass-card rounded-3xl">
+          <table class="w-full text-left border-collapse">
+            <thead>
+              <tr class="bg-[var(--th-border)]/20 text-[11px] font-mono text-th-muted uppercase tracking-wider border-b border-[var(--th-border)]">
+                <th class="w-24 text-center py-4"><%= t('terminal.time', default: 'TIME') %></th>
+                <th class="w-auto py-4 pl-4"><%= t('terminal.matchup', default: 'MATCHUP') %></th>
+                <th class="w-32 text-center py-4"><%= t('terminal.line', default: 'LINE') %></th>
+                <th class="w-32 text-center py-4"><%= t('terminal.status', default: 'STATUS') %></th>
+                <th class="w-40 text-right py-4 pr-6"><%= t('terminal.action', default: 'ACTION') %></th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-[var(--th-border)]">
+              <% games.each do |game| %>
+                <tr class="hover:bg-black/5 dark:hover:bg-white/5 transition-colors group">
+                  <td class="text-center tabular-nums py-5">
+                    <span class="text-xs font-bold text-slate-500 dark:text-slate-400 font-mono"><%= game.game_date.strftime("%H:%M") %></span>
+                  </td>
+                  <td>
+                    <div class="flex items-center gap-6">
+                      <div class="flex items-center gap-4 group-hover:translate-x-1 transition-transform">
+                        <span class="text-lg font-black text-[var(--th-heading)] tracking-tighter uppercase"><%= game.away_abbr %></span>
+                        <iconify-icon icon="solar:v-bold" class="text-[10px] opacity-20 text-primary"></iconify-icon>
+                        <span class="text-lg font-black text-[var(--th-heading)] tracking-tighter uppercase"><%= game.home_abbr %></span>
+                      </div>
+                      <% if game.schedule_note.present? %>
+                        <div class="px-2 py-0.5 rounded bg-red-500/10 text-red-500 text-[9px] font-black border border-red-500/20 uppercase tracking-tighter"><%= t('terminal.anomaly', default: 'ANOMALY') %></div>
+                      <% end %>
+                    </div>
+                  </td>
+                  <td class="text-center tabular-nums">
+                    <span class="text-xs font-mono font-bold text-secondary">
+                      <%= game.home_spread.present? ? (game.home_spread > 0 ? "+#{game.home_spread}" : game.home_spread) : '--' %>
+                    </span>
+                  </td>
+                  <td class="text-center tabular-nums">
+                    <% if game.home_edge.present? %>
+                      <span class="text-[11px] font-mono font-black text-terminal-green uppercase tracking-tighter"><%= t('terminal.analysis_ready', default: 'Ready') %></span>
+                    <% else %>
+                      <span class="text-[10px] font-bold text-slate-300 dark:text-slate-800 tracking-widest uppercase"><%= t('terminal.pending', default: 'Pending') %></span>
+                    <% end %>
+                  </td>
+                  <td class="text-right">
+                    <% report = game.reports.published.last %>
+                    <% if report %>
+                      <%= link_to report_path(report, sport: current_sport&.slug), class: "inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-gradient-to-r from-primary to-secondary text-white text-[10px] font-black uppercase tracking-widest shadow-lg shadow-primary/20 hover:scale-105 active:scale-95 transition-all" do %>
+                        <span><%= t('home.view_report', default: 'View Report') %></span>
+                        <iconify-icon icon="solar:alt-arrow-right-bold" class="text-sm"></iconify-icon>
+                      <% end %>
+                    <% else %>
+                      <div class="px-6 py-2.5 text-[10px] font-black text-slate-300 dark:text-slate-800 uppercase tracking-widest italic flex items-center justify-end gap-2">
+                        <div class="flex gap-1">
+                          <div class="w-1 h-1 rounded-full bg-slate-700 animate-bounce" style="animation-delay: -0.3s"></div>
+                          <div class="w-1 h-1 rounded-full bg-slate-700 animate-bounce" style="animation-delay: -0.15s"></div>
+                          <div class="w-1 h-1 rounded-full bg-slate-700 animate-bounce"></div>
+                        </div>
+                        <%= t('terminal.pending', default: 'Queue') %>
+                      </div>
+                    <% end %>
+                  </td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    <% end %>
+  <% else %>
+    <div class="glass-card py-40 rounded-3xl flex flex-col items-center justify-center opacity-30">
+      <iconify-icon icon="solar:ghost-bold-duotone" width="64" class="text-slate-400 mb-4"></iconify-icon>
+      <p class="text-sm font-bold uppercase tracking-[0.4em] font-display"><%= t('terminal.no_flux_data', default: 'Sector Stream Offline') %></p>
+    </div>
   <% end %>
 
-  <!-- Today's Games -->
-  <section>
-    <h2 class="text-lg font-semibold mb-3 light:text-gray-900"><%= @showing_upcoming ? t('home.upcoming_games', default: 'Upcoming Games') : t('home.todays_games') %></h2>
-    <% if @games&.any? %>
-      <div class="space-y-3">
-        <% @games.each do |game| %>
-          <div class="bg-gray-900 light:bg-white rounded-xl p-4 border border-gray-800 light:border-gray-200 light:shadow-sm">
-            <div class="flex justify-between items-center mb-2">
-              <span class="text-xs text-gray-500"><%= game.short_date %></span>
-              <span class="text-xs px-2 py-0.5 rounded-full bg-gray-800 light:bg-gray-100 text-gray-400 light:text-gray-600"><%= game.status || 'Scheduled' %></span>
-            </div>
-            <div class="text-center">
-              <div class="text-xl font-bold light:text-gray-900"><%= game.display_name %></div>
-              <div class="text-sm text-gray-500 mt-1"><%= game.venue %></div>
-            </div>
-            <% if game.reports.published.any? %>
-              <%= link_to report_path(game.reports.published.last, sport: current_sport&.slug),
-                  class: "mt-3 block w-full text-center py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium transition" do %>
-                <%= t('home.view_report') %>
-              <% end %>
-            <% end %>
-          </div>
-        <% end %>
-      </div>
-    <% else %>
-      <div class="bg-gray-900 light:bg-white rounded-xl p-8 text-center border border-gray-800 light:border-gray-200">
-        <iconify-icon icon="solar:calendar-mark-linear" width="48" class="text-gray-700 light:text-gray-300 mx-auto mb-3"></iconify-icon>
-        <p class="text-gray-500"><%= t('home.no_games') %></p>
-      </div>
-    <% end %>
-  </section>
-
-  <!-- Recent Reports -->
-  <section>
-    <div class="flex justify-between items-center mb-3">
-      <h2 class="text-lg font-semibold light:text-gray-900"><%= t('home.recent_reports') %></h2>
-      <%= link_to t('home.see_all'), reports_path(sport: current_sport&.slug), class: "text-sm text-indigo-500" %>
-    </div>
-    <% if @recent_reports&.any? %>
-      <div class="space-y-2">
-        <% @recent_reports.each do |report| %>
-          <%= link_to report_path(report, sport: current_sport&.slug), class: "block bg-gray-900 light:bg-white rounded-xl p-4 border border-gray-800 light:border-gray-200 hover:border-gray-700 light:hover:border-gray-300 light:shadow-sm transition" do %>
-            <div class="flex justify-between items-start">
-              <div>
-                <div class="font-medium light:text-gray-900"><%= report.game&.display_name %></div>
-                <div class="text-sm text-gray-500 mt-1"><%= report.pick %></div>
-              </div>
-              <div class="text-right">
-                <div class="text-sm font-medium text-indigo-500"><%= report.confidence_stars %></div>
-                <div class="text-xs text-gray-500 mt-1"><%= report.published_at&.strftime("%m/%d") %></div>
-              </div>
-            </div>
-          <% end %>
-        <% end %>
-      </div>
-    <% else %>
-      <div class="bg-gray-900 light:bg-white rounded-xl p-6 text-center border border-gray-800 light:border-gray-200">
-        <p class="text-gray-500"><%= t('home.no_reports') %></p>
-      </div>
-    <% end %>
-  </section>
-
-  <!-- Recent Insights -->
-  <section>
-    <div class="flex justify-between items-center mb-3">
-      <h2 class="text-lg font-semibold light:text-gray-900"><%= t('home.latest_insights') %></h2>
-      <%= link_to t('home.see_all'), insights_path(sport: current_sport&.slug), class: "text-sm text-indigo-500" %>
-    </div>
-    <% if @recent_insights&.any? %>
-      <div class="space-y-2">
-        <% @recent_insights.each do |insight| %>
-          <%= link_to insight_path(insight, sport: current_sport&.slug), class: "block bg-gray-900 light:bg-white rounded-xl p-4 border border-gray-800 light:border-gray-200 hover:border-gray-700 light:hover:border-gray-300 light:shadow-sm transition" do %>
-            <div class="text-sm text-indigo-500 mb-1"><%= t("categories.#{insight.category}", default: insight.category&.titleize) %></div>
-            <div class="font-medium light:text-gray-900"><%= insight.title %></div>
-            <div class="text-xs text-gray-500 mt-2"><%= insight.published_at&.strftime("%m/%d %H:%M") %></div>
-          <% end %>
-        <% end %>
-      </div>
-    <% else %>
-      <div class="bg-gray-900 light:bg-white rounded-xl p-6 text-center border border-gray-800 light:border-gray-200">
-        <p class="text-gray-500"><%= t('home.no_insights') %></p>
-      </div>
-    <% end %>
-  </section>
 </div>

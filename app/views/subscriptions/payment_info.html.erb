@@ -1,0 +1,250 @@
+<% content_for(:title) { "#{t('terminal.payment_info', default: '결제 안내')} | G9 AI Analysis" } %>
+
+<div class="min-h-[80vh] flex items-center justify-center px-4 py-12 animate-fade-in">
+  <div class="w-full max-w-xl">
+    
+    <!-- G9 Terminal Style Container -->
+    <div class="terminal-container rounded-3xl overflow-hidden border-2 border-primary/30 shadow-2xl shadow-primary/10">
+      <!-- Terminal Header -->
+      <div class="terminal-header bg-primary/10 border-b border-primary/20 px-6 py-3 flex justify-between items-center">
+        <div class="flex items-center gap-2">
+          <div class="w-2 h-2 rounded-full bg-primary animate-pulse"></div>
+          <span class="text-primary font-black tracking-widest text-[10px]">PAYMENT_GATEWAY_V4.0</span>
+        </div>
+        <span class="text-slate-500 font-mono text-[9px]">ID: SUB-<%= @subscription.id %></span>
+      </div>
+
+      <div class="p-8 space-y-8 bg-[#0d1117]">
+        <!-- Welcome Message -->
+        <div class="space-y-2">
+          <h1 class="text-3xl font-display font-black text-white uppercase tracking-tighter italic">
+            <%= t('terminal.complete_transfer', default: '입금 절차를 완료해주세요') %>
+          </h1>
+          <p class="text-sm text-slate-500 font-medium">
+            <%= t('terminal.payment_waiting', default: '결제 요청이 접수되었습니다. 아래 계좌로 입금하시면 관리자 확인 후 즉시 활성화됩니다.') %>
+          </p>
+        </div>
+
+        <!-- SECTION 1: 구독 정보 (Subscription Info) -->
+        <div class="space-y-3">
+          <h2 class="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+            <div class="w-1 h-1 rounded-full bg-primary"></div>
+            <%= t('terminal.subscription_info', default: '구독 정보') %>
+          </h2>
+
+          <div class="glass-panel rounded-2xl border border-white/5 overflow-hidden">
+            <div class="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-white/5">
+              <!-- Plan Name -->
+              <div class="p-6">
+                <span class="text-[9px] font-black text-slate-500 uppercase tracking-widest block mb-2"><%= t('terminal.selected_plan', default: '선택한 플랜') %></span>
+                <div class="flex items-center gap-3">
+                  <div class="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center text-primary border border-primary/30">
+                    <iconify-icon icon="solar:ticket-bold-duotone" class="text-xl"></iconify-icon>
+                  </div>
+                  <span class="text-xl font-display font-black text-white uppercase"><%= @plan_info[:name] %></span>
+                </div>
+              </div>
+
+              <!-- Subscription Period -->
+              <div class="p-6 bg-primary/5">
+                <span class="text-[9px] font-black text-slate-500 uppercase tracking-widest block mb-2"><%= t('terminal.subscription_period', default: '구독 기간') %></span>
+                <span class="text-lg font-display font-black text-white"><%= @plan_info[:duration_days] %><span class="text-xs ml-1 font-bold">일</span></span>
+              </div>
+
+              <!-- Order Number -->
+              <div class="p-6">
+                <span class="text-[9px] font-black text-slate-500 uppercase tracking-widest block mb-2"><%= t('terminal.order_number', default: '주문번호') %></span>
+                <span class="text-lg font-mono font-black text-primary">SUB-<%= @subscription.id %></span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- SECTION 2: 결제 안내 (Payment Instructions) -->
+        <div class="space-y-3">
+          <h2 class="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+            <div class="w-1 h-1 rounded-full bg-amber-500"></div>
+            <%= t('terminal.payment_instructions', default: '결제 안내') %>
+          </h2>
+
+          <div class="bg-black/40 rounded-2xl border border-white/10 p-6 space-y-6">
+            <!-- Bank Account -->
+            <div>
+              <div class="flex items-center justify-between mb-4">
+                <div class="flex items-center gap-3">
+                  <div class="w-8 h-8 rounded bg-amber-500/20 flex items-center justify-center text-amber-500 border border-amber-500/30">
+                    <iconify-icon icon="solar:bank-note-bold-duotone" class="text-lg"></iconify-icon>
+                  </div>
+                  <span class="text-xs font-black text-slate-300 uppercase tracking-widest"><%= t('terminal.bank_account', default: '입금 계좌') %></span>
+                </div>
+                <span class="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-500 text-[9px] font-black border border-emerald-500/20 uppercase tracking-tighter"><%= t('terminal.active_receiver', default: 'Active_Receiver') %></span>
+              </div>
+
+              <div class="relative group">
+                <div class="bg-[#161b22] border border-white/5 rounded-xl px-6 py-5 flex items-center justify-between group-hover:border-primary/30 transition-all">
+                  <div class="space-y-1">
+                    <span class="text-[10px] font-bold text-slate-500 uppercase">카카오뱅크 (KakaoBank)</span>
+                    <p class="text-2xl font-mono font-black text-white tracking-wider">3333-XX-XXXXXXX</p>
+                  </div>
+                  <button onclick="navigator.clipboard.writeText('333300000000')" class="w-10 h-10 rounded-lg bg-white/5 flex items-center justify-center text-slate-400 hover:bg-primary hover:text-white transition-all" title="<%= t('terminal.copy', default: '복사') %>">
+                    <iconify-icon icon="solar:copy-bold-duotone" class="text-lg"></iconify-icon>
+                  </button>
+                </div>
+              </div>
+
+              <div class="flex items-center justify-between px-2 text-sm mt-4">
+                <span class="text-slate-500 font-medium"><%= t('terminal.account_holder', default: '예금주') %></span>
+                <span class="text-white font-black">홍길동 (G9_SPORTS)</span>
+              </div>
+            </div>
+
+            <!-- Amount -->
+            <div class="border-t border-white/5 pt-6">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-black text-slate-400 uppercase tracking-widest"><%= t('terminal.amount_due', default: '입금액') %></span>
+                <span class="text-2xl font-display font-black text-primary"><%= number_to_currency(@plan_info[:price], unit: "₩", precision: 0) %></span>
+              </div>
+            </div>
+
+            <!-- Transfer Memo -->
+            <div class="bg-blue-500/5 border border-blue-500/20 rounded-xl p-4 flex gap-3">
+              <iconify-icon icon="solar:info-circle-bold-duotone" class="text-blue-500 text-xl flex-shrink-0 mt-0.5"></iconify-icon>
+              <div class="text-xs text-blue-200/70 leading-relaxed space-y-2">
+                <p>
+                  <span class="text-blue-500 font-bold"><%= t('terminal.transfer_memo_title', default: '입금자명 기재:') %></span>
+                  <span class="text-blue-300">
+                    <%= t('terminal.transfer_memo_instruction', default: '주문번호(SUB-' + @subscription.id.to_s + ')를 입금자명에 기재해주세요') %>
+                  </span>
+                </p>
+                <p class="text-blue-400">
+                  <%= t('terminal.example', default: '예:') %> <span class="font-mono">SUB-<%= @subscription.id %></span> 또는 <span class="font-mono"><%= current_user.email.split('@').first %>-<%= @subscription.id %></span>
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- SECTION 3: 확인 방법 (Verification Method) -->
+        <div class="space-y-3">
+          <h2 class="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+            <div class="w-1 h-1 rounded-full bg-emerald-500"></div>
+            <%= t('terminal.verification_method', default: '확인 방법') %>
+          </h2>
+
+          <div class="space-y-3">
+            <!-- Option 1: Telegram -->
+            <div class="bg-black/40 rounded-xl border border-emerald-500/20 p-4 space-y-3">
+              <div class="flex items-start gap-3">
+                <div class="w-6 h-6 rounded-full bg-emerald-500/20 flex items-center justify-center text-emerald-500 flex-shrink-0 mt-0.5">
+                  <span class="text-xs font-black">1</span>
+                </div>
+                <div class="min-w-0 flex-1">
+                  <h3 class="text-xs font-black text-emerald-400 uppercase tracking-wide mb-1">
+                    <%= t('terminal.telegram_verification', default: '텔레그램으로 확인') %>
+                  </h3>
+                  <p class="text-xs text-slate-300 leading-relaxed">
+                    <%= t('terminal.telegram_instruction', default: '@gate9sports 채널에 입금 완료 메시지를 전송하세요. 관리자가 확인 후 즉시 활성화합니다.') %>
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Option 2: Kakao Channel -->
+            <div class="bg-black/40 rounded-xl border border-emerald-500/20 p-4 space-y-3">
+              <div class="flex items-start gap-3">
+                <div class="w-6 h-6 rounded-full bg-emerald-500/20 flex items-center justify-center text-emerald-500 flex-shrink-0 mt-0.5">
+                  <span class="text-xs font-black">2</span>
+                </div>
+                <div class="min-w-0 flex-1">
+                  <h3 class="text-xs font-black text-emerald-400 uppercase tracking-wide mb-1">
+                    <%= t('terminal.kakao_channel', default: '카카오톡 채널') %>
+                  </h3>
+                  <p class="text-xs text-slate-300 leading-relaxed">
+                    <%= t('terminal.kakao_instruction', default: 'G9 Sports 카카오톡 채널에서 입금 확인을 요청할 수 있습니다.') %>
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Option 3: Admin Approval -->
+            <div class="bg-black/40 rounded-xl border border-emerald-500/20 p-4 space-y-3">
+              <div class="flex items-start gap-3">
+                <div class="w-6 h-6 rounded-full bg-emerald-500/20 flex items-center justify-center text-emerald-500 flex-shrink-0 mt-0.5">
+                  <span class="text-xs font-black">3</span>
+                </div>
+                <div class="min-w-0 flex-1">
+                  <h3 class="text-xs font-black text-emerald-400 uppercase tracking-wide mb-1">
+                    <%= t('terminal.admin_approval', default: '관리자 확인') %>
+                  </h3>
+                  <p class="text-xs text-slate-300 leading-relaxed">
+                    <%= t('terminal.approval_message', default: '관리자가 입금을 확인하면 자동으로 구독이 활성화되며, 이메일로 알림을 받습니다.') %>
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- SECTION 4: 주의사항 (Important Notice) -->
+        <div class="space-y-3">
+          <h2 class="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+            <div class="w-1 h-1 rounded-full bg-red-500"></div>
+            <%= t('terminal.important_notice', default: '주의사항') %>
+          </h2>
+
+          <div class="space-y-3">
+            <!-- 24-hour Expiration -->
+            <div class="bg-red-500/5 border border-red-500/20 rounded-xl p-4 flex gap-3">
+              <iconify-icon icon="solar:clock-circle-bold-duotone" class="text-red-500 text-xl flex-shrink-0 mt-0.5"></iconify-icon>
+              <div class="text-xs text-red-200/70 leading-relaxed">
+                <span class="text-red-400 font-bold"><%= t('terminal.expiration_warning', default: '24시간 미입금:') %></span>
+                <%= t('terminal.expiration_message', default: '24시간 이내에 입금하지 않으면 주문이 자동으로 취소됩니다.') %>
+              </div>
+            </div>
+
+            <!-- Payment Confirmation -->
+            <div class="bg-slate-500/5 border border-slate-500/20 rounded-xl p-4 flex gap-3">
+              <iconify-icon icon="solar:check-circle-bold-duotone" class="text-slate-400 text-xl flex-shrink-0 mt-0.5"></iconify-icon>
+              <div class="text-xs text-slate-300 leading-relaxed">
+                <span class="font-bold"><%= t('terminal.confirmation_tip', default: '입금 확인 팁:') %></span>
+                <%= t('terminal.confirmation_message', default: '은행 앱에서 출금 확인 후 관리자에게 알려주면 더 빠르게 처리됩니다.') %>
+              </div>
+            </div>
+
+            <!-- Refund Policy -->
+            <div class="bg-slate-500/5 border border-slate-500/20 rounded-xl p-4 flex gap-3">
+              <iconify-icon icon="solar:return-square-bold-duotone" class="text-slate-400 text-xl flex-shrink-0 mt-0.5"></iconify-icon>
+              <div class="text-xs text-slate-300 leading-relaxed">
+                <span class="font-bold"><%= t('terminal.refund_policy', default: '환불 정책:') %></span>
+                <%= t('terminal.refund_message', default: '활성화 후 이용 중 환불을 원하실 경우 관리자에게 문의해주세요.') %>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Action Area -->
+        <div class="space-y-4 pt-4 border-t border-white/5">
+          <a href="https://t.me/gate9sports" target="_blank" class="flex items-center justify-center gap-3 w-full py-4 bg-gradient-to-r from-primary to-secondary text-white font-black text-xs uppercase tracking-[0.2em] rounded-xl shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all">
+            <iconify-icon icon="mdi:telegram" class="text-xl"></iconify-icon>
+            <%= t('terminal.request_approval', default: '입금 확인 요청 (텔레그램)') %>
+          </a>
+
+          <%= link_to new_subscription_path, class: "flex items-center justify-center gap-2 w-full py-3 text-slate-500 hover:text-white transition-colors text-[10px] font-black uppercase tracking-widest" do %>
+            <iconify-icon icon="solar:alt-arrow-left-bold" class="text-sm"></iconify-icon>
+            <%= t('terminal.back_to_plans', default: '요금제 다시 선택') %>
+          <% end %>
+        </div>
+      </div>
+
+      <!-- Footer Info -->
+      <div class="bg-black/20 border-t border-white/5 px-8 py-4 flex justify-between items-center text-[9px] font-mono text-slate-600">
+        <span class="flex items-center gap-2">
+          <div class="w-1.5 h-1.5 rounded-full bg-slate-700"></div>
+          SECURE_ENCRYPTION_ENABLED
+        </span>
+        <span>VER: G9_CORE_PRO_2026</span>
+      </div>
+    </div>
+
+  </div>
+</div>

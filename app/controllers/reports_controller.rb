@@ -11,19 +11,30 @@ class ReportsController < ApplicationController
 
   def show
     @report = Report.find(params[:id])
+    @full_access = @report.free? || can_access_premium?
 
-    # Premium reports require authentication
-    unless @report.free? || premium_user?
-      flash[:alert] = "This report requires a premium subscription"
-      redirect_to reports_path(sport: params[:sport])
+    # Track paywall impression for premium reports without full access
+    unless @full_access
+      track_conversion_event(
+        "paywall_viewed",
+        report_id: @report.id,
+        sport: @report.game.sport.slug,
+        plan_keys: Subscription.plans.keys
+      )
     end
+
+    report_scope = @report.game.sport.reports.published
+    @sport_performance = Report.stats(report_scope)
+    @recent_results = report_scope.with_result.order(result_recorded_at: :desc, published_at: :desc).limit(5)
   end
 
   private
 
-  def premium_user?
-    # Check session for premium authentication
-    # For now, admin users get premium access
-    session[:admin_authenticated] || session[:premium_authenticated]
+  def can_access_premium?
+    current_user&.can_access_premium? || session[:admin_authenticated]
+  end
+
+  def store_location
+    session[:return_to] = request.fullpath if request.get?
   end
 end

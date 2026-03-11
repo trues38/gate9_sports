@@ -1,0 +1,328 @@
+<% content_for :title, "실적 공개 | G9 AI Analysis" %>
+
+<%
+  has_data = @overall_stats[:total] > 0
+  win_rate = @overall_stats[:win_rate]
+  win_rate_color = if win_rate >= 60
+    "text-emerald-400"
+  elsif win_rate >= 50
+    "text-yellow-400"
+  else
+    "text-red-400"
+  end
+%>
+
+<!-- ═══════════════════════════════════════════════════ -->
+<!-- HERO: Win Rate + Record -->
+<!-- ═══════════════════════════════════════════════════ -->
+<div class="mb-10">
+  <!-- Page header -->
+  <div class="flex items-center gap-3 mb-8">
+    <div class="w-1 h-8 bg-primary rounded-full"></div>
+    <div>
+      <h1 class="text-2xl font-display font-bold text-white uppercase tracking-tight italic">PERFORMANCE RECORD</h1>
+      <p class="text-xs text-slate-500 mt-0.5">투명한 실적 공개 — 검증된 데이터만 표시</p>
+    </div>
+  </div>
+
+  <% if has_data %>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+      <!-- Big Win Rate -->
+      <div class="md:col-span-1 bg-[var(--bg-card)] border border-[var(--th-border)] rounded-2xl p-8 flex flex-col items-center justify-center text-center relative overflow-hidden">
+        <div class="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent pointer-events-none"></div>
+        <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3">Overall Win Rate</p>
+        <div class="text-7xl font-display font-black <%= win_rate_color %> leading-none mb-3">
+          <%= @overall_stats[:win_rate] %>%
+        </div>
+        <p class="text-sm font-bold text-slate-400">
+          <%= @overall_stats[:wins] %>W &nbsp;–&nbsp; <%= @overall_stats[:losses] %>L
+          <% if @overall_stats[:pushes] > 0 %>
+            &nbsp;–&nbsp; <%= @overall_stats[:pushes] %>P
+          <% end %>
+        </p>
+        <div class="mt-4 w-full bg-slate-800 rounded-full h-2">
+          <div class="bg-primary h-2 rounded-full transition-all duration-700"
+               style="width: <%= [@overall_stats[:win_rate], 100].min %>%"></div>
+        </div>
+      </div>
+
+      <!-- Summary Stats Grid -->
+      <div class="md:col-span-2 grid grid-cols-2 gap-4">
+        <div class="bg-[var(--bg-card)] border border-[var(--th-border)] rounded-xl p-6">
+          <p class="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-2">총 픽 수</p>
+          <p class="text-3xl font-display font-black text-white"><%= @overall_stats[:total] %></p>
+          <p class="text-xs text-slate-500 mt-1">결과 확인 완료</p>
+        </div>
+        <div class="bg-[var(--bg-card)] border border-[var(--th-border)] rounded-xl p-6">
+          <p class="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-2">Net Units</p>
+          <% net = @overall_stats[:net_units] %>
+          <p class="text-3xl font-display font-black <%= net >= 0 ? 'text-emerald-400' : 'text-red-400' %>">
+            <%= net >= 0 ? '+' : '' %><%= net %>u
+          </p>
+          <p class="text-xs text-slate-500 mt-1">유닛 수익</p>
+        </div>
+        <div class="bg-[var(--bg-card)] border border-[var(--th-border)] rounded-xl p-6">
+          <p class="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-2">ROI</p>
+          <% roi = @overall_stats[:roi] %>
+          <p class="text-3xl font-display font-black <%= roi >= 0 ? 'text-emerald-400' : 'text-red-400' %>">
+            <%= roi >= 0 ? '+' : '' %><%= roi %>%
+          </p>
+          <p class="text-xs text-slate-500 mt-1">투자 수익률</p>
+        </div>
+        <div class="bg-[var(--bg-card)] border border-[var(--th-border)] rounded-xl p-6">
+          <p class="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-2">Push</p>
+          <p class="text-3xl font-display font-black text-slate-400"><%= @overall_stats[:pushes] %></p>
+          <p class="text-xs text-slate-500 mt-1">무효 처리</p>
+        </div>
+      </div>
+    </div>
+  <% else %>
+    <!-- Empty state hero -->
+    <div class="bg-[var(--bg-card)] border border-[var(--th-border)] rounded-2xl p-16 text-center">
+      <div class="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-6">
+        <iconify-icon icon="solar:chart-2-bold-duotone" class="text-3xl text-primary"></iconify-icon>
+      </div>
+      <h2 class="text-xl font-display font-bold text-white mb-2">데이터 수집 중</h2>
+      <p class="text-sm text-slate-500">실적 데이터가 충분히 쌓이면 공개됩니다.</p>
+    </div>
+  <% end %>
+</div>
+
+<% if has_data %>
+
+<!-- ═══════════════════════════════════════════════════ -->
+<!-- EDGE SCORE TIERS -->
+<!-- ═══════════════════════════════════════════════════ -->
+<div class="mb-10">
+  <div class="flex items-center gap-2 mb-5">
+    <iconify-icon icon="solar:layers-bold-duotone" class="text-xl text-primary"></iconify-icon>
+    <h2 class="text-sm font-black text-white uppercase tracking-widest">엣지 스코어별 적중률</h2>
+    <span class="ml-2 text-[9px] text-slate-500 font-mono">높은 엣지 = 높은 정확도</span>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+    <%
+      tiers = [
+        { label: "HIGH EDGE", range: "80+", icon: "🔥", stats: @high_edge_stats,  border: "border-orange-500/30", glow: "from-orange-500/10" },
+        { label: "MID EDGE",  range: "60–79", icon: "⚡", stats: @mid_edge_stats, border: "border-yellow-500/30", glow: "from-yellow-500/10" },
+        { label: "LOW EDGE",  range: "<60",  icon: "📊", stats: @low_edge_stats,  border: "border-slate-600/50",  glow: "from-slate-700/20" },
+      ]
+    %>
+    <% tiers.each do |tier| %>
+      <% s = tier[:stats] %>
+      <div class="bg-[var(--bg-card)] border <%= tier[:border] %> rounded-xl p-6 relative overflow-hidden">
+        <div class="absolute inset-0 bg-gradient-to-br <%= tier[:glow] %> to-transparent pointer-events-none"></div>
+        <div class="relative">
+          <div class="flex items-center justify-between mb-4">
+            <div>
+              <p class="text-base"><%= tier[:icon] %></p>
+              <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest"><%= tier[:label] %></p>
+              <p class="text-[8px] text-slate-600 font-mono">Score <%= tier[:range] %></p>
+            </div>
+            <% if s[:total] > 0 %>
+              <%
+                wr = s[:win_rate]
+                wr_cls = wr >= 60 ? "text-emerald-400" : wr >= 50 ? "text-yellow-400" : "text-red-400"
+              %>
+              <p class="text-4xl font-display font-black <%= wr_cls %>"><%= wr %>%</p>
+            <% else %>
+              <p class="text-2xl font-display font-black text-slate-600">—</p>
+            <% end %>
+          </div>
+          <% if s[:total] > 0 %>
+            <div class="flex items-center gap-1 text-xs font-mono text-slate-400 mb-3">
+              <span class="text-emerald-400 font-bold"><%= s[:wins] %>W</span>
+              <span class="text-slate-600">/</span>
+              <span class="text-red-400 font-bold"><%= s[:losses] %>L</span>
+              <% if s[:pushes] > 0 %>
+                <span class="text-slate-600">/</span>
+                <span class="text-slate-400"><%= s[:pushes] %>P</span>
+              <% end %>
+              <span class="text-slate-600 ml-2">(<%= s[:total] %> total)</span>
+            </div>
+            <div class="w-full bg-slate-800 rounded-full h-1.5">
+              <div class="<%= s[:win_rate] >= 60 ? 'bg-emerald-500' : s[:win_rate] >= 50 ? 'bg-yellow-500' : 'bg-red-500' %> h-1.5 rounded-full"
+                   style="width: <%= [s[:win_rate], 100].min %>%"></div>
+            </div>
+          <% else %>
+            <p class="text-xs text-slate-600">데이터 없음</p>
+          <% end %>
+        </div>
+      </div>
+    <% end %>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════ -->
+<!-- MONTHLY BREAKDOWN TABLE -->
+<!-- ═══════════════════════════════════════════════════ -->
+<% if @monthly_stats.any? %>
+<div class="mb-10">
+  <div class="flex items-center gap-2 mb-5">
+    <iconify-icon icon="solar:calendar-bold-duotone" class="text-xl text-primary"></iconify-icon>
+    <h2 class="text-sm font-black text-white uppercase tracking-widest">월별 실적</h2>
+  </div>
+
+  <div class="bg-[var(--bg-card)] border border-[var(--th-border)] rounded-xl overflow-hidden">
+    <table class="w-full text-xs font-mono">
+      <thead>
+        <tr class="border-b border-[var(--th-border)] bg-black/20">
+          <th class="text-left px-5 py-3 text-[9px] font-black text-slate-500 uppercase tracking-widest">월</th>
+          <th class="text-center px-4 py-3 text-[9px] font-black text-slate-500 uppercase tracking-widest">총 픽</th>
+          <th class="text-center px-4 py-3 text-[9px] font-black text-slate-500 uppercase tracking-widest">W</th>
+          <th class="text-center px-4 py-3 text-[9px] font-black text-slate-500 uppercase tracking-widest">L</th>
+          <th class="text-center px-4 py-3 text-[9px] font-black text-slate-500 uppercase tracking-widest">P</th>
+          <th class="text-center px-4 py-3 text-[9px] font-black text-slate-500 uppercase tracking-widest">적중률</th>
+          <th class="text-center px-4 py-3 text-[9px] font-black text-slate-500 uppercase tracking-widest">ROI</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-[var(--th-border)]">
+        <% @monthly_stats.each do |month_key, s| %>
+          <%
+            wr = s[:win_rate]
+            wr_cls = wr >= 55 ? "text-emerald-400 font-bold" : wr < 45 ? "text-red-400 font-bold" : "text-yellow-400"
+            roi_cls = s[:roi] >= 0 ? "text-emerald-400" : "text-red-400"
+            parsed_month = Date.strptime(month_key, "%Y-%m") rescue nil
+            month_label = parsed_month ? parsed_month.strftime("%Y년 %-m월") : month_key
+          %>
+          <tr class="hover:bg-white/2 transition-colors">
+            <td class="px-5 py-3 text-slate-300 font-bold"><%= month_label %></td>
+            <td class="px-4 py-3 text-center text-slate-400"><%= s[:total] %></td>
+            <td class="px-4 py-3 text-center text-emerald-400 font-bold"><%= s[:wins] %></td>
+            <td class="px-4 py-3 text-center text-red-400 font-bold"><%= s[:losses] %></td>
+            <td class="px-4 py-3 text-center text-slate-500"><%= s[:pushes] %></td>
+            <td class="px-4 py-3 text-center">
+              <span class="<%= wr_cls %>"><%= wr %>%</span>
+            </td>
+            <td class="px-4 py-3 text-center <%= roi_cls %>">
+              <%= s[:roi] >= 0 ? '+' : '' %><%= s[:roi] %>%
+            </td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+</div>
+<% end %>
+
+<!-- ═══════════════════════════════════════════════════ -->
+<!-- RECENT RESULTS -->
+<!-- ═══════════════════════════════════════════════════ -->
+<% if @recent_results.any? %>
+<div class="mb-10">
+  <div class="flex items-center gap-2 mb-5">
+    <iconify-icon icon="solar:history-bold-duotone" class="text-xl text-primary"></iconify-icon>
+    <h2 class="text-sm font-black text-white uppercase tracking-widest">최근 결과</h2>
+    <span class="ml-2 text-[9px] text-slate-500 font-mono">최근 <%= @recent_results.size %>건</span>
+  </div>
+
+  <div class="bg-[var(--bg-card)] border border-[var(--th-border)] rounded-xl overflow-hidden">
+    <!-- Desktop table -->
+    <div class="hidden md:block overflow-x-auto">
+      <table class="w-full text-xs font-mono">
+        <thead>
+          <tr class="border-b border-[var(--th-border)] bg-black/20">
+            <th class="text-left px-5 py-3 text-[9px] font-black text-slate-500 uppercase tracking-widest">날짜</th>
+            <th class="text-left px-5 py-3 text-[9px] font-black text-slate-500 uppercase tracking-widest">경기</th>
+            <th class="text-left px-5 py-3 text-[9px] font-black text-slate-500 uppercase tracking-widest">픽</th>
+            <th class="text-center px-4 py-3 text-[9px] font-black text-slate-500 uppercase tracking-widest">엣지</th>
+            <th class="text-center px-4 py-3 text-[9px] font-black text-slate-500 uppercase tracking-widest">결과</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-[var(--th-border)]">
+          <% @recent_results.each do |report| %>
+            <%
+              result_icon = case report.result
+                when "win"  then { icon: "✅", cls: "text-emerald-400" }
+                when "loss" then { icon: "❌", cls: "text-red-400" }
+                when "push" then { icon: "➖", cls: "text-slate-400" }
+                else             { icon: "⏳", cls: "text-slate-600" }
+              end
+              edge = report.edge_score
+              edge_cls = if edge.nil? then "text-slate-600"
+                         elsif edge.to_f >= 80 then "text-orange-400 font-bold"
+                         elsif edge.to_f >= 60 then "text-yellow-400"
+                         else "text-slate-400"
+                         end
+              game = report.game
+              matchup = game ? "#{game.away_abbr || game.away_team} @ #{game.home_abbr || game.home_team}" : "—"
+              pick_display = [report.pick_type&.upcase, report.pick_side&.upcase, report.pick_line&.to_s].compact.join(" ")
+              pick_display = report.pick if pick_display.blank? && report.pick.present?
+              sport_slug = game&.sport&.slug || "basketball"
+            %>
+            <tr class="hover:bg-white/2 transition-colors">
+              <td class="px-5 py-3 text-slate-500">
+                <%= report.published_at&.in_time_zone("Asia/Seoul")&.strftime("%m/%d") || "—" %>
+              </td>
+              <td class="px-5 py-3 text-slate-300 truncate max-w-[160px]"><%= matchup %></td>
+              <td class="px-5 py-3 text-slate-400 truncate max-w-[120px]"><%= pick_display.presence || "—" %></td>
+              <td class="px-4 py-3 text-center <%= edge_cls %>">
+                <%= edge ? "#{edge}" : "—" %>
+              </td>
+              <td class="px-4 py-3 text-center">
+                <span class="text-base <%= result_icon[:cls] %>"><%= result_icon[:icon] %></span>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Mobile card list -->
+    <div class="md:hidden divide-y divide-[var(--th-border)]">
+      <% @recent_results.each do |report| %>
+        <%
+          result_icon = case report.result
+            when "win"  then { icon: "✅", cls: "text-emerald-400", label: "적중" }
+            when "loss" then { icon: "❌", cls: "text-red-400",     label: "미적중" }
+            when "push" then { icon: "➖", cls: "text-slate-400",   label: "무효" }
+            else             { icon: "⏳", cls: "text-slate-600",   label: "대기" }
+          end
+          edge = report.edge_score
+          game = report.game
+          matchup = game ? "#{game.away_abbr || game.away_team} @ #{game.home_abbr || game.home_team}" : "—"
+          pick_display = [report.pick_type&.upcase, report.pick_side&.upcase, report.pick_line&.to_s].compact.join(" ")
+          pick_display = report.pick if pick_display.blank? && report.pick.present?
+        %>
+        <div class="px-4 py-3 flex items-center justify-between">
+          <div class="flex-1 min-w-0">
+            <p class="text-xs font-bold text-slate-300 truncate"><%= matchup %></p>
+            <p class="text-[10px] text-slate-500 mt-0.5">
+              <%= report.published_at&.in_time_zone("Asia/Seoul")&.strftime("%m/%d") %>
+              <% if edge.present? %>
+                · Edge <span class="text-primary"><%= edge %></span>
+              <% end %>
+              <% if pick_display.present? %>
+                · <%= pick_display %>
+              <% end %>
+            </p>
+          </div>
+          <div class="ml-3 flex-shrink-0 text-center">
+            <span class="text-xl"><%= result_icon[:icon] %></span>
+            <p class="text-[8px] font-bold <%= result_icon[:cls] %>"><%= result_icon[:label] %></p>
+          </div>
+        </div>
+      <% end %>
+    </div>
+  </div>
+</div>
+<% end %>
+
+<% end %> <%# end has_data %>
+
+<!-- ═══════════════════════════════════════════════════ -->
+<!-- DISCLAIMER -->
+<!-- ═══════════════════════════════════════════════════ -->
+<div class="mt-8 p-6 bg-slate-900/50 border border-slate-800 rounded-xl">
+  <div class="flex items-start gap-3">
+    <iconify-icon icon="solar:shield-warning-bold-duotone" class="text-xl text-slate-500 flex-shrink-0 mt-0.5"></iconify-icon>
+    <div>
+      <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">주의사항</p>
+      <p class="text-xs text-slate-600 leading-relaxed">
+        과거 실적이 미래 수익을 보장하지 않습니다. 모든 스포츠 베팅에는 원금 손실 위험이 있습니다.
+        책임감 있는 베팅을 권장하며, 감당할 수 없는 금액은 베팅하지 마십시오.
+        본 서비스는 정보 제공 목적이며, 투자 조언이 아닙니다.
+      </p>
+    </div>
+  </div>
+</div>

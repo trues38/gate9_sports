@@ -1,5 +1,5 @@
 class Admin::ReportsController < Admin::BaseController
-  before_action :set_report, only: [:show, :edit, :update, :destroy, :publish]
+  before_action :set_report, only: [:edit, :update, :destroy, :publish, :create_media]
 
   def index
     @reports = Report.includes(:game).order(created_at: :desc).limit(50)
@@ -43,6 +43,14 @@ class Admin::ReportsController < Admin::BaseController
   def publish
     @report.publish!
     redirect_to admin_reports_path, notice: "Report published!"
+  end
+
+  def create_media
+    payload = AdcraftTaskClient.enqueue_report_media!(@report)
+    message = payload["task_id"].present? ? "Media production task created: #{payload['task_id']}" : "Media production task created in AdCraft!"
+    redirect_to admin_reports_path, notice: message
+  rescue AdcraftTaskClient::Error => e
+    redirect_to admin_reports_path, alert: "Error connecting to AdCraft: #{e.message}"
   end
 
   private

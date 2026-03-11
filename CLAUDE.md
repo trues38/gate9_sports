@@ -8,14 +8,14 @@ NBA 경기 일정, 오즈, 부상, 라인업 정보를 제공하는 **유료 스
 - **핵심 가치**: B2B/3in4 스케줄 엣지 + 오즈 + 부상/라인업 통합 정보
 - **리포트 생성**: Claude + GPT + 수동 편집 혼합 (향후 자동화 전환 예정)
 - **데이터 파이프라인**: 자체 GraphQL 서버에서 수집 → 가공 → 리포트 생성
-- **도메인**: 미정 (현재 IP 접속: 86.48.2.202)
+- **도메인**: 미정 (현재 메인 VPS IP 접속: 193.46.243.3)
 
 ## Tech Stack
 
 - **Framework**: Rails 8.1.2
 - **Frontend**: Hotwire (Turbo + Stimulus), Tailwind CSS
 - **Database**: SQLite (production 포함)
-- **Deployment**: Kamal → Contabo VPS (86.48.2.202)
+- **Deployment**: Kamal → Contabo NVMe Master VPS (193.46.243.3)
 - **Registry**: GitHub Container Registry (ghcr.io/trues38/gate9_sports)
 
 ## 주요 기능
@@ -118,8 +118,8 @@ kamal deploy
 ```
 
 ### 서버 접속
-- **URL**: http://86.48.2.202/basketball/schedule
-- **Admin**: http://86.48.2.202/admin/reports?token=gate9_admin_x7k9m2p5
+- **URL**: http://193.46.243.3/basketball/schedule
+- **Admin**: http://193.46.243.3/admin/reports?token=gate9_admin_x7k9m2p5
 
 ## URLs
 

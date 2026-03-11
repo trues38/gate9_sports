@@ -1,0 +1,113 @@
+<% content_for(:title) { "구독 플랜 | GATE9 SPORTS" } %>
+
+<div class="min-h-[80vh] flex items-center justify-center px-4 py-12">
+  <div class="w-full max-w-lg">
+    <!-- Header -->
+    <div class="text-center mb-8">
+      <div class="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-600 shadow-lg shadow-amber-500/30 mb-4">
+        <iconify-icon icon="solar:crown-bold" width="28" class="text-white"></iconify-icon>
+      </div>
+      <h1 class="text-2xl font-bold text-white mb-2">프리미엄 구독</h1>
+      <p class="text-gray-400">매일 전문 분석 리포트를 받아보세요</p>
+    </div>
+
+    <!-- Current Subscription Badge -->
+    <% if @current_subscription %>
+      <div class="mb-6 p-5 bg-gradient-to-r from-indigo-500/20 to-purple-500/20 border border-indigo-500/30 rounded-2xl backdrop-blur">
+        <div class="flex items-center gap-3 mb-2">
+          <iconify-icon icon="solar:verified-check-bold" width="24" class="text-indigo-400"></iconify-icon>
+          <span class="text-indigo-400 font-medium">현재 구독 중</span>
+        </div>
+        <p class="text-white text-xl font-bold mb-1"><%= @current_subscription.plan_name %></p>
+        <p class="text-gray-400 text-sm">
+          만료일: <%= @current_subscription.expires_at.strftime("%Y-%m-%d %H:%M") %>
+          <span class="text-indigo-400 font-medium">(<%= @current_subscription.days_remaining %>일 남음)</span>
+        </p>
+      </div>
+    <% end %>
+
+    <% if @pending_subscription %>
+      <div class="mb-6 p-5 bg-gradient-to-r from-amber-500/10 to-orange-500/10 border border-amber-500/30 rounded-2xl backdrop-blur">
+        <div class="flex items-center gap-3 mb-2">
+          <iconify-icon icon="solar:clock-circle-bold" width="24" class="text-amber-400"></iconify-icon>
+          <span class="text-amber-400 font-medium">입금 확인 대기 중</span>
+        </div>
+        <p class="text-white text-lg font-bold mb-1"><%= @pending_subscription.plan_name %></p>
+        <p class="text-gray-400 text-sm">
+          요청 시각: <%= @pending_subscription.payment_requested_at&.in_time_zone("Asia/Seoul")&.strftime("%Y-%m-%d %H:%M") %>
+        </p>
+      </div>
+    <% end %>
+
+    <!-- Plans -->
+    <div class="space-y-4 mb-8">
+      <% @plans.each do |plan| %>
+        <% is_best = plan[:featured] %>
+        <%= form_with url: subscriptions_path, method: :post, class: "block" do |f| %>
+          <%= hidden_field_tag :plan, plan[:key] %>
+          <%= hidden_field_tag :source_path, request.fullpath %>
+          <button type="submit"
+                  class="relative w-full p-5 <%= is_best ? 'bg-gradient-to-r from-indigo-900/50 to-purple-900/50 border-indigo-500' : 'bg-gray-900/70 border-gray-700 hover:border-gray-600' %> border rounded-2xl transition-all duration-200 text-left group hover:scale-[1.02] hover:shadow-xl">
+            <% if is_best %>
+              <div class="absolute -top-3 left-1/2 -translate-x-1/2">
+                <span class="px-3 py-1 bg-gradient-to-r from-amber-500 to-orange-500 text-white text-xs font-bold rounded-full shadow-lg">
+                  BEST VALUE
+                </span>
+              </div>
+            <% end %>
+
+            <div class="flex justify-between items-center">
+              <div class="flex items-center gap-4">
+                <div class="w-12 h-12 rounded-xl <%= is_best ? 'bg-indigo-500/30' : 'bg-gray-800' %> flex items-center justify-center">
+                  <iconify-icon icon="<%= plan[:key] == 'daily' ? 'solar:calendar-minimalistic-bold' : (plan[:key] == 'weekly' ? 'solar:calendar-bold' : 'solar:calendar-mark-bold') %>"
+                                width="24"
+                                class="<%= is_best ? 'text-indigo-400' : 'text-gray-400 group-hover:text-indigo-400' %> transition"></iconify-icon>
+                </div>
+                <div>
+                  <p class="text-lg font-bold text-white group-hover:text-indigo-400 transition"><%= plan[:name] %></p>
+                  <p class="text-gray-500 text-sm"><%= plan[:duration_days] %>일 이용권</p>
+                  <p class="text-gray-400 text-xs mt-1"><%= plan[:teaser] %></p>
+                </div>
+              </div>
+              <div class="text-right">
+                <p class="text-2xl font-bold <%= is_best ? 'text-indigo-400' : 'text-white' %>">
+                  <%= number_to_currency(plan[:price], unit: "₩", precision: 0) %>
+                </p>
+                <p class="text-gray-500 text-xs">일 <%= number_to_currency((plan[:price].to_f / plan[:duration_days]).round, unit: "₩", precision: 0) %></p>
+              </div>
+            </div>
+          </button>
+        <% end %>
+      <% end %>
+    </div>
+
+    <!-- Benefits Card -->
+    <div class="bg-gray-900/70 backdrop-blur-xl border border-gray-800 rounded-2xl p-6">
+      <h3 class="font-semibold text-white mb-4 flex items-center gap-2">
+        <iconify-icon icon="solar:gift-bold" width="20" class="text-amber-400"></iconify-icon>
+        프리미엄 혜택
+      </h3>
+      <ul class="space-y-3">
+        <% @premium_benefits.each do |benefit| %>
+          <li class="flex items-center gap-3 text-gray-300">
+            <div class="w-6 h-6 rounded-full bg-green-500/20 flex items-center justify-center flex-shrink-0">
+              <iconify-icon icon="solar:check-circle-bold" class="text-green-400" width="16"></iconify-icon>
+            </div>
+            <span><%= benefit %></span>
+          </li>
+        <% end %>
+        <li class="flex items-center gap-3 text-gray-400">
+          <div class="w-6 h-6 rounded-full bg-gray-700/50 flex items-center justify-center flex-shrink-0">
+            <iconify-icon icon="solar:clock-circle-linear" class="text-gray-500" width="14"></iconify-icon>
+          </div>
+          <span class="text-sm">실시간 라인 변동 알림 (예정)</span>
+        </li>
+      </ul>
+    </div>
+
+    <!-- Footer Note -->
+    <p class="text-center text-gray-600 text-xs mt-6">
+      결제 요청은 저장되고, 관리자 승인 후 구독이 활성화됩니다
+    </p>
+  </div>
+</div>

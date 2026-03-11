@@ -39,6 +39,7 @@
             <% end %>
           </td>
           <td class="px-4 py-3 text-right space-x-2">
+            <%= button_to "Create Media", create_media_admin_report_path(report), method: :post, class: "inline-block text-emerald-400 hover:text-emerald-300 text-sm font-bold" %>
             <%= link_to "Edit", edit_admin_report_path(report), class: "text-indigo-400 hover:text-indigo-300 text-sm" %>
             <% unless report.published? %>
               <%= button_to "Publish", publish_admin_report_path(report), method: :post, class: "text-green-400 hover:text-green-300 text-sm" %>

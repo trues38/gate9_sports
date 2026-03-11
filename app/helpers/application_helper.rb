@@ -55,28 +55,17 @@ module ApplicationHelper
     @lineups_cache[team_abbr] || []
   end
 
-  # Returns: :upcoming, :live, :finished
+  # Returns: :upcoming or :finished (no live tracking)
   def game_status(game)
-    # Trust ESPN status for live/finished
-    case game.status&.downcase
-    when "live"
-      return :live
-    when "finished"
-      return :finished
-    end
+    # DB status가 있으면 우선
+    return :finished if game.status&.downcase == "finished"
 
-    # Time-based estimation for scheduled/unknown
+    # 시간 기반 판단 (경기 시작 + 3시간 후 = 종료로 간주)
     now = Time.current.in_time_zone("Asia/Seoul")
     game_time = game.game_date.in_time_zone("Asia/Seoul")
-    game_end_estimate = game_time + 2.5.hours
+    game_end_estimate = game_time + 3.hours
 
-    if now < game_time
-      :upcoming
-    elsif now >= game_time && now < game_end_estimate
-      :live
-    else
-      :finished
-    end
+    now >= game_end_estimate ? :finished : :upcoming
   end
 
   private

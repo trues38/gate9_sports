@@ -22,6 +22,82 @@ class Report < ApplicationRecord
 
   delegate :sport, to: :game
 
+  # structured_data 표준 포맷:
+  # {
+  #   "triggers": ["B2B", "3in4", "TeamRegime_weakness"],
+  #   "signals": ["HIGH_EDGE_ML", "STRONG_UP_FLOW"],
+  #   "edge_score": 72,
+  #   "away_regime": "WARMING",
+  #   "home_regime": "COOLING",
+  #   "notes": "추가 메모"
+  # }
+  STANDARD_TRIGGERS = %w[
+    B2B 3in4 4in5
+    TeamRegime_weakness
+    injury_impact
+    rest_advantage
+    altitude
+    travel_fatigue
+  ].freeze
+
+  STANDARD_SIGNALS = %w[
+    HIGH_EDGE_ML MID_EDGE_ML HIGH_EDGE_LOW_RISK
+    STRONG_UP_FLOW COLLAPSE_FADE
+    HOME_BIG_DOG LOW_TOTAL_UNDER
+  ].freeze
+
+  # structured_data 헬퍼 메서드
+  def parsed_data
+    @parsed_data ||= begin
+      return {} if structured_data.blank?
+      case structured_data
+      when String then JSON.parse(structured_data) rescue {}
+      when Hash then structured_data
+      else {}
+      end
+    end
+  end
+
+  def triggers
+    parsed_data['triggers'] || []
+  end
+
+  def signals
+    parsed_data['signals'] || []
+  end
+
+  def edge_score
+    parsed_data['edge_score']
+  end
+
+  def set_structured_data(triggers: [], signals: [], edge_score: nil, **extras)
+    data = {
+      'triggers' => triggers,
+      'signals' => signals,
+      'edge_score' => edge_score
+    }.merge(extras.stringify_keys).compact
+
+    self.structured_data = data.to_json
+  end
+
+  def add_trigger(trigger)
+    data = parsed_data
+    data['triggers'] ||= []
+    data['triggers'] << trigger unless data['triggers'].include?(trigger)
+    self.structured_data = data.to_json
+  end
+
+  def add_signal(signal)
+    data = parsed_data
+    data['signals'] ||= []
+    data['signals'] << signal unless data['signals'].include?(signal)
+    self.structured_data = data.to_json
+  end
+
+  after_commit :trigger_adcraft_media, if: :just_published?
+  after_commit :trigger_telegram_broadcast, if: :just_published?
+  after_commit :trigger_insight_generation, if: :just_published?
+
   def publish!
     update(status: "published", published_at: Time.current)
   end
@@ -38,8 +114,65 @@ class Report < ApplicationRecord
     !free?
   end
 
+  # Multi-Agent Consensus Logic
+  def calculate_consensus!
+    picks = [gpt_pick, gemini_pick, claude_pick].compact
+    return if picks.empty?
+
+    # Simple majority rule or strongest confidence
+    tally = picks.tally
+    self.consensus_pick = tally.max_by { |_k, v| v }.first
+    save!
+  end
+
+  def gpt_pick
+    extract_pick(gpt_analysis)
+  end
+
+  def gemini_pick
+    extract_pick(gemini_analysis)
+  end
+
+  def claude_pick
+    extract_pick(claude_analysis)
+  end
+
   def confidence_stars
     confidence || "---"
+  end
+
+  private
+
+  def just_published?
+    saved_change_to_status? && status == "published"
+  end
+
+  def trigger_adcraft_media
+    AdcraftTaskClient.enqueue_report_media!(self)
+  rescue => e
+    Rails.logger.error("[AdCraft] Failed to trigger media for Report ##{id}: #{e.message}")
+    # Don't raise - AdCraft being down must not block report publishing
+  end
+
+  def trigger_telegram_broadcast
+    TelegramPublisher.publish_report!(self)
+  rescue => e
+    Rails.logger.error("[Telegram] Failed to broadcast Report ##{id}: #{e.message}")
+    # Don't raise - Telegram being down must not block report publishing
+  end
+
+  def trigger_insight_generation
+    InsightGenerator.generate_from_report!(self)
+  rescue => e
+    Rails.logger.error("[InsightGenerator] Failed to generate insight for Report ##{id}: #{e.message}")
+    # Don't raise - insight generation must not block report publishing
+  end
+
+  def extract_pick(analysis_text)
+    return nil if analysis_text.blank?
+    # Simple regex to find "PICK: XXX" pattern in the analysis
+    match = analysis_text.match(/PICK:\s*(.+)$/)
+    match ? match[1].strip : nil
   end
 
   # Result tracking methods

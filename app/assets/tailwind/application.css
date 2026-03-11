@@ -1,11 +1,135 @@
 @import "tailwindcss";
+@plugin "@tailwindcss/forms";
+@plugin "@tailwindcss/typography";
 
-/* Light mode variant */
+@source "../../../app/views";
+@source "../../../app/helpers";
+@source "../../../app/javascript";
+@source "../../../public";
+
 @custom-variant light (&:where(.light, .light *));
 
-/* Safe area for mobile */
-@layer utilities {
-  .safe-area-bottom {
-    padding-bottom: env(safe-area-inset-bottom);
-  }
+@theme {
+    /* Colors */
+    --color-primary: #8b5cf6;
+    --color-secondary: #06b6d4;
+    
+    --color-terminal-bg: #010409;
+    --color-terminal-panel: rgba(13, 17, 23, 0.7);
+    --color-terminal-green: #00ff41;
+    --color-terminal-amber: #ffb000;
+    --color-terminal-blue: #00e5ff;
+    --color-terminal-red: #ff3131;
+    --color-terminal-border: rgba(48, 54, 61, 0.5);
+    --color-terminal-text: #c9d1d9;
+    --color-terminal-dim: #8b949e;
+
+    /* Fonts */
+    --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+    --font-display: "Rajdhani", sans-serif;
+    --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+
+    /* Font sizes */
+    --text-xxs: 0.625rem;
+    --text-xxs--line-height: 1rem;
+    --text-terminal-sm: 0.75rem;
+    --text-terminal-sm--line-height: 1.1;
+    --text-terminal-base: 0.875rem;
+    --text-terminal-base--line-height: 1.2;
+
+    /* Spacing */
+    --spacing-grid-gap: 1px;
+}
+
+/* Design System Variables */
+:root {
+    --bg-main: #f8fafc;
+    --bg-sidebar: #0f172a;
+    --bg-card: #ffffff;
+    --th-heading: #0f172a;
+    --th-body: #334155;
+    --th-muted: #64748b;
+    --th-border: #e2e8f0;
+    
+    /* Variables used in reports/show */
+    --text-main: #0f172a;
+    --border-subtle: #e2e8f0;
+    --bg-glass: rgba(255, 255, 255, 0.7);
+}
+
+.dark {
+    --bg-main: #020617;
+    --bg-sidebar: #020617;
+    --bg-card: #0f172a;
+    --th-heading: #f8fafc;
+    --th-body: #94a3b8;
+    --th-muted: #475569;
+    --th-border: #1e293b;
+
+    /* Variables used in reports/show */
+    --text-main: #f8fafc;
+    --border-subtle: #1e293b;
+    --bg-glass: rgba(15, 23, 42, 0.7);
+}
+
+@layer base {
+    body {
+        @apply bg-[var(--bg-main)] font-sans text-[var(--th-body)] antialiased transition-all duration-500 overflow-hidden;
+        font-size: 14px;
+    }
+    * {
+        @apply transition-colors duration-300;
+    }
+}
+
+@layer components {
+    .sidebar-item {
+        @apply flex items-center gap-4 px-6 py-3.5 transition-all border-l-4 border-transparent text-slate-500 hover:text-white hover:bg-white/5;
+    }
+    .sidebar-item-active {
+        @apply bg-primary/10 border-primary text-white font-bold;
+    }
+
+    .glass-card {
+        @apply bg-[var(--bg-card)] border border-[var(--th-border)] rounded-2xl shadow-sm transition-all;
+    }
+
+    .card-clean {
+        @apply bg-[var(--bg-card)] border border-[var(--border-subtle)] rounded-3xl shadow-sm overflow-hidden transition-all;
+    }
+
+    .terminal-container {
+        @apply bg-[#0d1117] border border-[#30363d] overflow-hidden shadow-2xl relative;
+    }
+    .terminal-header {
+        @apply flex items-center justify-between px-4 py-2 bg-[#161b22] border-b border-[#30363d] text-[10px] font-mono text-slate-400 uppercase tracking-widest font-black;
+    }
+    .glass-panel {
+        @apply bg-[var(--bg-glass)] border border-[var(--border-subtle)] backdrop-blur-md shadow-xl;
+    }
+
+    /* Hero Section Animations */
+    .animate-fade-in {
+        animation: fadeIn 0.8s ease-out forwards;
+        opacity: 0;
+    }
+
+    .neon-text {
+        text-shadow:
+            0 0 10px currentColor,
+            0 0 20px currentColor,
+            0 0 30px currentColor,
+            0 0 40px currentColor;
+    }
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }

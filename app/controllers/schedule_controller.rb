@@ -14,6 +14,9 @@ class ScheduleController < ApplicationController
                             .where(game_date: start_of_day..end_of_day)
                             .order(:game_date)
 
+      # Filter by league
+      @games = @games.where(league: params[:league]) if params[:league].present?
+
       # Filter by edge type
       @filter = params[:filter] || "all"
       case @filter

@@ -1,0 +1,81 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+# NotebookLM Research Bridge Script
+#
+# Runs via `rails runner` to extract game data from the DB,
+# then outputs structured JSON for NotebookLM MCP consumption.
+#
+# Usage:
+#   bin/rails runner bin/notebooklm_research               # today's games
+#   bin/rails runner bin/notebooklm_research 2026-03-11     # specific date
+#   bin/rails runner bin/notebooklm_research --export       # export to files
+#   bin/rails runner bin/notebooklm_research --status       # show status
+#
+# Output modes:
+#   stdout (default): prints JSON to stdout for piping
+#   --export: writes files to tmp/notebooklm/export/
+#
+
+require "json"
+
+# Parse arguments
+args = ARGV.dup
+export_mode = args.delete("--export")
+status_mode = args.delete("--status")
+import_mode = args.delete("--import")
+date_str = args.find { |a| a.match?(/\d{4}-\d{2}-\d{2}/) }
+date = date_str ? Date.parse(date_str) : Date.current
+
+bridge = NotebookLmBridge.new(date: date)
+
+if status_mode
+  # Show status
+  games = Game.where("DATE(game_date) = ?", date).where(sport_id: 1).order(:game_date)
+  status = {
+    date: date.to_s,
+    game_count: games.count,
+    games: games.map { |g|
+      {
+        id: g.id,
+        matchup: g.display_name,
+        spread: g.home_spread&.to_f,
+        total: g.total_line&.to_f,
+        status: g.status
+      }
+    },
+    export_exists: Dir.exist?(bridge.export_path),
+    results_exist: Dir.exist?(bridge.results_path)
+  }
+  puts JSON.pretty_generate(status)
+
+elsif import_mode
+  # Import results
+  result = bridge.import_results
+  puts JSON.pretty_generate(result)
+
+elsif export_mode
+  # Export to files
+  result = bridge.export_all
+  puts JSON.pretty_generate(result)
+
+else
+  # Default: output all game data as JSON to stdout
+  games = Game.where("DATE(game_date) = ?", date).where(sport_id: 1).order(:game_date)
+
+  if games.empty?
+    $stderr.puts "No games found for #{date}"
+    exit 1
+  end
+
+  context = bridge.send(:load_shared_context)
+
+  output = {
+    date: date.to_s,
+    generated_at: Time.current.iso8601,
+    game_count: games.count,
+    games: games.map { |game| bridge.send(:build_game_export, game, context) }
+  }
+
+  puts JSON.pretty_generate(output)
+end

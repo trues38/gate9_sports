@@ -1,0 +1,118 @@
+<% content_for(:title) { "회원가입 | GATE9 SPORTS" } %>
+
+<div class="min-h-[80vh] flex items-center justify-center px-4 py-12">
+  <div class="w-full max-w-md">
+    <!-- Logo & Title -->
+    <div class="text-center mb-8">
+      <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 shadow-lg shadow-indigo-500/30 mb-4">
+        <iconify-icon icon="solar:basketball-bold" width="32" class="text-white"></iconify-icon>
+      </div>
+      <h1 class="text-2xl font-bold bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">
+        GATE9 SPORTS
+      </h1>
+      <p class="text-gray-500 text-sm mt-1">프리미엄 스포츠 분석</p>
+    </div>
+
+    <!-- Registration Card -->
+    <div class="bg-gray-900/70 backdrop-blur-xl border border-gray-800 rounded-2xl p-8 shadow-2xl">
+      <h2 class="text-xl font-semibold text-center mb-6 text-white">회원가입</h2>
+
+      <% if @user.errors.any? %>
+        <div class="mb-6 p-4 bg-red-500/10 border border-red-500/30 rounded-xl">
+          <div class="flex items-center gap-2 mb-2">
+            <iconify-icon icon="solar:danger-triangle-bold" width="18" class="text-red-400"></iconify-icon>
+            <span class="text-red-400 text-sm font-medium">입력을 확인해주세요</span>
+          </div>
+          <ul class="list-disc list-inside space-y-1 text-red-400/80 text-sm pl-1">
+            <% @user.errors.full_messages.each do |message| %>
+              <li><%= message %></li>
+            <% end %>
+          </ul>
+        </div>
+      <% end %>
+
+      <%= form_with model: @user, url: sign_up_path, method: :post, class: "space-y-5" do |f| %>
+        <div>
+          <label for="user_name" class="block text-sm font-medium text-gray-300 mb-2">
+            이름 <span class="text-gray-500 font-normal">(선택)</span>
+          </label>
+          <div class="relative">
+            <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+              <iconify-icon icon="solar:user-linear" width="18" class="text-gray-500"></iconify-icon>
+            </div>
+            <%= f.text_field :name,
+                class: "w-full pl-11 pr-4 py-3.5 bg-gray-800/50 border border-gray-700 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all duration-200",
+                placeholder: "홍길동" %>
+          </div>
+        </div>
+
+        <div>
+          <label for="user_email" class="block text-sm font-medium text-gray-300 mb-2">이메일</label>
+          <div class="relative">
+            <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+              <iconify-icon icon="solar:letter-linear" width="18" class="text-gray-500"></iconify-icon>
+            </div>
+            <%= f.email_field :email, required: true, autofocus: true,
+                class: "w-full pl-11 pr-4 py-3.5 bg-gray-800/50 border border-gray-700 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all duration-200",
+                placeholder: "email@example.com" %>
+          </div>
+        </div>
+
+        <div>
+          <label for="user_password" class="block text-sm font-medium text-gray-300 mb-2">비밀번호</label>
+          <div class="relative">
+            <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+              <iconify-icon icon="solar:lock-keyhole-linear" width="18" class="text-gray-500"></iconify-icon>
+            </div>
+            <%= f.password_field :password, required: true,
+                class: "w-full pl-11 pr-4 py-3.5 bg-gray-800/50 border border-gray-700 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all duration-200",
+                placeholder: "6자리 이상" %>
+          </div>
+          <p class="mt-1.5 text-xs text-gray-500 pl-1">최소 6자 이상 입력해주세요</p>
+        </div>
+
+        <div>
+          <label for="user_password_confirmation" class="block text-sm font-medium text-gray-300 mb-2">비밀번호 확인</label>
+          <div class="relative">
+            <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+              <iconify-icon icon="solar:lock-keyhole-minimalistic-linear" width="18" class="text-gray-500"></iconify-icon>
+            </div>
+            <%= f.password_field :password_confirmation, required: true,
+                class: "w-full pl-11 pr-4 py-3.5 bg-gray-800/50 border border-gray-700 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all duration-200",
+                placeholder: "비밀번호 재입력" %>
+          </div>
+        </div>
+
+        <button type="submit"
+                class="w-full py-3.5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-semibold rounded-xl shadow-lg shadow-indigo-500/25 hover:shadow-indigo-500/40 transition-all duration-200 flex items-center justify-center gap-2">
+          <iconify-icon icon="solar:user-plus-bold" width="20"></iconify-icon>
+          가입하기
+        </button>
+      <% end %>
+
+      <!-- Divider -->
+      <div class="relative my-6">
+        <div class="absolute inset-0 flex items-center">
+          <div class="w-full border-t border-gray-700"></div>
+        </div>
+        <div class="relative flex justify-center text-sm">
+          <span class="px-4 bg-gray-900 text-gray-500">또는</span>
+        </div>
+      </div>
+
+      <!-- Sign In Link -->
+      <p class="text-center text-gray-400 text-sm">
+        이미 계정이 있으신가요?
+        <%= link_to sign_in_path, class: "ml-1 text-indigo-400 hover:text-indigo-300 font-medium transition-colors" do %>
+          로그인
+          <iconify-icon icon="solar:arrow-right-linear" width="14" class="inline ml-0.5"></iconify-icon>
+        <% end %>
+      </p>
+    </div>
+
+    <!-- Footer -->
+    <p class="text-center text-gray-600 text-xs mt-6">
+      가입하면 서비스 이용약관 및 개인정보처리방침에 동의하게 됩니다
+    </p>
+  </div>
+</div>

@@ -17,7 +17,7 @@ class Neo4jClient
   class QueryError < StandardError; end
 
   # 연결 정보 (환경변수 또는 기본값)
-  HOST = ENV.fetch("NEO4J_HOST", "86.48.2.202")
+  HOST = ENV.fetch("NEO4J_HOST", "193.46.243.3")
   PORT = ENV.fetch("NEO4J_PORT", "7474")
   USER = ENV.fetch("NEO4J_USER", "neo4j")
   PASSWORD = ENV.fetch("NEO4J_PASSWORD", "nba_vultr_2025")

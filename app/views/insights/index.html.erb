@@ -1,29 +1,44 @@
-<div class="px-4 py-4">
-  <h1 class="text-xl font-bold mb-4 light:text-gray-900"><%= t('insights.title') %></h1>
+<div class="px-4 py-6 space-y-8">
+  <div class="flex items-center justify-between mb-2">
+    <div>
+      <h2 class="text-2xl font-bold tracking-tight text-th-heading uppercase font-display">
+        <%= t('insights.title', default: 'Market Insights') %>
+      </h2>
+      <p class="text-[10px] text-th-muted font-black uppercase tracking-widest mt-1">Intelligence Pulse</p>
+    </div>
+    <div class="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-400 border border-emerald-500/20">
+        <iconify-icon icon="solar:lightbulb-bolt-bold-duotone" class="text-xl"></iconify-icon>
+    </div>
+  </div>
 
   <% if @insights.any? %>
-    <div class="space-y-3">
+    <div class="grid grid-cols-1 gap-6">
       <% @insights.each do |insight| %>
-        <%= link_to insight_path(insight, sport: current_sport&.slug), class: "block bg-gray-900 light:bg-white rounded-xl p-4 border border-gray-800 light:border-gray-200 hover:border-gray-700 light:hover:border-gray-300 light:shadow-sm transition" do %>
-          <div class="text-xs text-indigo-500 font-medium mb-2"><%= t("categories.#{insight.category}", default: insight.category&.titleize) %></div>
-          <div class="font-semibold light:text-gray-900 mb-2"><%= insight.title %></div>
-          <div class="text-sm text-gray-400 light:text-gray-500 line-clamp-2"><%= truncate(insight.content, length: 100) %></div>
-          <div class="flex items-center justify-between mt-3">
-            <div class="flex gap-1">
+        <%= link_to insight_path(insight, sport: current_sport&.slug), class: "block glass-panel rounded-3xl p-8 border-t-2 border-t-emerald-500/20 hover:border-emerald-500/40 transition-all group" do %>
+          <div class="text-[9px] font-black text-emerald-500 mb-3 uppercase tracking-[0.2em]"><%= t("categories.#{insight.category}", default: insight.category&.titleize) %></div>
+          <div class="text-xl font-bold text-th-heading leading-tight mb-4 group-hover:text-emerald-400 transition tracking-tight"><%= insight.title %></div>
+          <div class="text-sm text-th-muted line-clamp-2 leading-relaxed mb-6 font-medium"><%= truncate(insight.content, length: 120) %></div>
+          
+          <div class="flex items-center justify-between mt-auto pt-6 border-t border-white/5">
+            <div class="flex gap-2">
               <% insight.tags_array.first(3).each do |tag| %>
-                <span class="text-xs px-2 py-0.5 bg-gray-800 light:bg-gray-100 text-gray-400 light:text-gray-600 rounded"><%= tag %></span>
+                <span class="text-[9px] font-black px-2 py-1 glass-panel text-th-subtle border border-white/10 rounded uppercase tracking-tighter hover:text-white transition-colors"><%= tag %></span>
               <% end %>
             </div>
-            <div class="text-xs text-gray-600 light:text-gray-400"><%= insight.published_at&.strftime("%m/%d") %></div>
+            <div class="flex items-center gap-3">
+                <span class="text-[10px] text-th-subtle font-bold italic"><%= insight.published_at&.strftime("%b %d, %H:%M") %></span>
+                <div class="w-8 h-8 rounded-full glass-panel flex items-center justify-center text-th-subtle group-hover:bg-emerald-500/10 group-hover:text-emerald-400 transition-all">
+                    <iconify-icon icon="solar:arrow-right-up-linear" width="16"></iconify-icon>
+                </div>
+            </div>
           </div>
         <% end %>
       <% end %>
     </div>
   <% else %>
-    <div class="bg-gray-900 light:bg-white rounded-xl p-12 text-center border border-gray-800 light:border-gray-200">
-      <iconify-icon icon="solar:lightbulb-bolt-linear" width="48" class="text-gray-700 light:text-gray-300 mx-auto mb-4"></iconify-icon>
-      <p class="text-gray-500"><%= t('insights.no_insights') %></p>
-      <p class="text-sm text-gray-600 light:text-gray-400 mt-1"><%= t('insights.stay_tuned') %></p>
+    <div class="glass-panel rounded-3xl p-20 text-center border border-white/5 opacity-50">
+      <iconify-icon icon="solar:ghost-bold-duotone" width="48" class="text-th-muted mx-auto mb-4"></iconify-icon>
+      <p class="text-[10px] font-black text-th-muted uppercase tracking-[0.3em]"><%= t('insights.no_insights', default: 'Awaiting market intelligence') %></p>
     </div>
   <% end %>
 </div>

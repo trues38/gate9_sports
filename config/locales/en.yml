@@ -28,7 +28,45 @@ en:
     baseball: "Baseball"
     soccer: "Soccer"
 
-  # Home
+  # App Title
+  app_name: "G9 AI Analysis"
+  app_logo: "G9 AI"
+
+  # Dashboard & Terminal
+  terminal:
+    dashboard: "DASHBOARD"
+    system_online: "SYSTEM_ONLINE"
+    sectors: "SECTORS"
+    account: "ACCOUNT"
+    my_library: "MY LIBRARY"
+    market_news: "MARKET NEWS"
+    premium_member: "Premium Member"
+    logout: "LOGOUT"
+    access_terminal: "ACCESS_TERMINAL"
+    todays_games: "TODAY'S GAMES"
+    league_games: "LEAGUE GAMES"
+    scanning_date: "SCANNING_DATE"
+    all_streams: "ALL_STREAMS"
+    time: "TIME"
+    matchup: "MATCHUP"
+    line: "LINE"
+    status: "STATUS"
+    action: "ACTION"
+    analysis_ready: "READY"
+    pending: "PENDING"
+    view_report: "View Report"
+    scanning: "Scanning..."
+    total: "TOTAL"
+    intel_level: "INTEL_LEVEL"
+    final: "FINAL"
+    live: "LIVE"
+    read_intel: "READ_INTEL"
+    queued: "QUEUED"
+    no_data: "NO_DATA"
+    no_flux_data: "No analysis data found for this period."
+    analysis_schedule: "G9 ANALYSIS SCHEDULE"
+
+  # Home (existing but update for new wording)
   home:
     todays_games: "Today's Games"
     upcoming_games: "Upcoming Games"
@@ -40,6 +78,14 @@ en:
     see_all: "See all"
     view_report: "View Report"
     edge_alert: "Schedule Edge"
+    main_headline: "ANALYSIS MATRIX"
+    matrix: "GAMES"
+    alpha_extraction: "Real-time AI analysis and predictions"
+    instruments: "games"
+    session_state: "Current system state"
+    win_rate: "Win Rate"
+    roi: "ROI"
+    total_picks: "Total Picks"
 
   # Reports
   reports:

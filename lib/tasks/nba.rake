@@ -180,76 +180,76 @@ namespace :nba do
       exit
     end
 
-    # Fetch for next 7 days
+    # ESPN API: dates 파라미터 없이 호출해야 odds 포함됨
+    # 오늘 경기만 가져오고, 미래 경기는 별도 처리
     updated = 0
-    (0..6).each do |day_offset|
-      date = (Date.current + day_offset).strftime("%Y%m%d")
-      uri = URI("https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=#{date}")
 
-      begin
-        http = Net::HTTP.new(uri.host, uri.port)
-        http.use_ssl = true
-        http.verify_mode = OpenSSL::SSL::VERIFY_NONE
-        http.verify_mode = OpenSSL::SSL::VERIFY_NONE
-        request = Net::HTTP::Get.new(uri)
-        request["User-Agent"] = "Mozilla/5.0"
-        response = http.request(request)
-        data = JSON.parse(response.body)
-      rescue => e
-        puts "Error fetching #{date}: #{e.message}"
-        next
-      end
+    # ESPN API: dates 파라미터 없이 호출해야 odds 포함됨
+    uri = URI("https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard")
 
-      events = data["events"] || []
-      events.each do |event|
-        competition = event["competitions"]&.first
-        next unless competition
+    begin
+      http = Net::HTTP.new(uri.host, uri.port)
+      http.use_ssl = true
+      http.verify_mode = OpenSSL::SSL::VERIFY_NONE
+      request = Net::HTTP::Get.new(uri)
+      request["User-Agent"] = "Mozilla/5.0"
+      response = http.request(request)
+      data = JSON.parse(response.body)
+    rescue => e
+      puts "Error fetching scoreboard: #{e.message}"
+      return
+    end
 
-        # Get teams
-        home_team = competition["competitors"]&.find { |c| c["homeAway"] == "home" }
-        away_team = competition["competitors"]&.find { |c| c["homeAway"] == "away" }
-        next unless home_team && away_team
+    # ESPN 약어 → DB 약어 매핑
+    abbr_map = { 'GS' => 'GSW', 'SA' => 'SAS', 'NY' => 'NYK', 'NO' => 'NOP', 'WSH' => 'WAS', 'UTAH' => 'UTA' }
 
-        home_abbr = home_team.dig("team", "abbreviation")
-        away_abbr = away_team.dig("team", "abbreviation")
+    events = data["events"] || []
+    events.each do |event|
+      competition = event["competitions"]&.first
+      next unless competition
 
-        # Find matching game in our DB
-        game_date = Time.parse(event["date"]).in_time_zone("Asia/Seoul").to_date
-        game = Game.where(sport: sport)
-                   .where(home_abbr: home_abbr, away_abbr: away_abbr)
-                   .where("DATE(game_date) = ?", game_date)
-                   .first
+      home_team = competition["competitors"]&.find { |c| c["homeAway"] == "home" }
+      away_team = competition["competitors"]&.find { |c| c["homeAway"] == "away" }
+      next unless home_team && away_team
 
-        next unless game
+      home_abbr = abbr_map[home_team.dig("team", "abbreviation")] || home_team.dig("team", "abbreviation")
+      away_abbr = abbr_map[away_team.dig("team", "abbreviation")] || away_team.dig("team", "abbreviation")
 
-        # Extract odds
-        odds = competition["odds"]&.first
-        if odds
-          spread_detail = odds["details"] # e.g., "LAL -3.5"
-          over_under = odds["overUnder"]
+      # Find matching game
+      game_date = Time.parse(event["date"]).in_time_zone("Asia/Seoul").to_date
+      game = Game.where(sport: sport)
+                 .where(home_abbr: home_abbr, away_abbr: away_abbr)
+                 .where("DATE(game_date) = ?", game_date)
+                 .first
 
-          # Parse spread - format is "TEAM -X.X" or "TEAM +X.X"
-          if spread_detail.present?
-            parts = spread_detail.split(" ")
-            if parts.length == 2
-              fav_team = parts[0]
-              spread_value = parts[1].to_f
+      next unless game
 
-              if fav_team == home_abbr
-                game.home_spread = spread_value
-                game.away_spread = -spread_value
-              elsif fav_team == away_abbr
-                game.away_spread = spread_value
-                game.home_spread = -spread_value
-              end
+      # Extract odds
+      odds = competition["odds"]&.first
+      if odds
+        spread_detail = odds["details"]
+        over_under = odds["overUnder"]
+
+        if spread_detail.present?
+          parts = spread_detail.split(" ")
+          if parts.length == 2
+            fav_team = abbr_map[parts[0]] || parts[0]
+            spread_value = parts[1].to_f
+
+            if fav_team == home_abbr
+              game.home_spread = spread_value
+              game.away_spread = -spread_value
+            elsif fav_team == away_abbr
+              game.away_spread = spread_value
+              game.home_spread = -spread_value
             end
           end
-
-          game.total_line = over_under if over_under.present?
-          game.save!
-          updated += 1
-          print "."
         end
+
+        game.total_line = over_under if over_under.present?
+        game.save!
+        updated += 1
+        puts "  #{away_abbr} @ #{home_abbr}: #{spread_detail}, O/U #{over_under}"
       end
     end
 

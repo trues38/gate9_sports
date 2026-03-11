@@ -1,0 +1,74 @@
+<% content_for(:title) { "로그인 | GATE9 SPORTS" } %>
+
+<div class="min-h-[80vh] flex items-center justify-center px-4 py-12">
+  <div class="w-full max-w-md">
+    <!-- Logo & Title -->
+    <div class="text-center mb-8">
+      <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 shadow-lg shadow-indigo-500/30 mb-4">
+        <iconify-icon icon="solar:basketball-bold" width="32" class="text-white"></iconify-icon>
+      </div>
+      <h1 class="text-2xl font-bold bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">
+        GATE9 SPORTS
+      </h1>
+      <p class="text-gray-500 text-sm mt-1">프리미엄 스포츠 분석</p>
+    </div>
+
+    <!-- Login Card -->
+    <div class="bg-gray-900/70 backdrop-blur-xl border border-gray-800 rounded-2xl p-8 shadow-2xl">
+      <h2 class="text-xl font-semibold text-center mb-6 text-white">로그인</h2>
+
+      <% if flash[:alert] %>
+        <div class="mb-6 p-4 bg-red-500/10 border border-red-500/30 rounded-xl flex items-center gap-3">
+          <iconify-icon icon="solar:danger-triangle-bold" width="20" class="text-red-400 flex-shrink-0"></iconify-icon>
+          <span class="text-red-400 text-sm"><%= flash[:alert] %></span>
+        </div>
+      <% end %>
+
+      <%= form_with url: sign_in_path, method: :post, class: "space-y-5" do |f| %>
+        <div>
+          <label for="email" class="block text-sm font-medium text-gray-300 mb-2">이메일</label>
+          <input type="email" name="email" id="email" required autofocus
+                 class="w-full px-4 py-3.5 bg-gray-800/50 border border-gray-700 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all duration-200"
+                 placeholder="email@example.com">
+        </div>
+
+        <div>
+          <label for="password" class="block text-sm font-medium text-gray-300 mb-2">비밀번호</label>
+          <input type="password" name="password" id="password" required
+                 class="w-full px-4 py-3.5 bg-gray-800/50 border border-gray-700 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all duration-200"
+                 placeholder="••••••••">
+        </div>
+
+        <button type="submit"
+                class="w-full py-3.5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-semibold rounded-xl shadow-lg shadow-indigo-500/25 hover:shadow-indigo-500/40 transition-all duration-200 flex items-center justify-center gap-2">
+          <iconify-icon icon="solar:login-3-bold" width="20"></iconify-icon>
+          로그인
+        </button>
+      <% end %>
+
+      <!-- Divider -->
+      <div class="relative my-6">
+        <div class="absolute inset-0 flex items-center">
+          <div class="w-full border-t border-gray-700"></div>
+        </div>
+        <div class="relative flex justify-center text-sm">
+          <span class="px-4 bg-gray-900 text-gray-500">또는</span>
+        </div>
+      </div>
+
+      <!-- Sign Up Link -->
+      <p class="text-center text-gray-400 text-sm">
+        계정이 없으신가요?
+        <%= link_to sign_up_path, class: "ml-1 text-indigo-400 hover:text-indigo-300 font-medium transition-colors" do %>
+          회원가입
+          <iconify-icon icon="solar:arrow-right-linear" width="14" class="inline ml-0.5"></iconify-icon>
+        <% end %>
+      </p>
+    </div>
+
+    <!-- Footer -->
+    <p class="text-center text-gray-600 text-xs mt-6">
+      로그인하면 서비스 이용약관에 동의하게 됩니다
+    </p>
+  </div>
+</div>
