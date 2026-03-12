@@ -2,8 +2,8 @@ Rails.application.routes.draw do
   # Health check
   get "up" => "rails/health#show", as: :rails_health_check
 
-  # Root → Home (Bloomberg Terminal Dashboard)
-  root "home#index"
+  # Root → Basketball Schedule (main product)
+  root to: redirect("/basketball/schedule")
 
   # Waitlist subscription
   post "subscribe", to: "home#subscribe", as: :subscribe_home
