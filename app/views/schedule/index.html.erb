@@ -78,7 +78,7 @@
                 <div class="flex items-center gap-3">
                   <span class="text-sm font-bold text-th-heading tracking-tighter uppercase"><%= game.away_abbr %> @ <%= game.home_abbr %></span>
                   <% if game.schedule_note.present? %>
-                    <span class="text-[8px] px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-500 font-black">!</span>
+                    <span class="text-[8px] px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-500 font-black cursor-help" title="<%= game.schedule_note %>">!</span>
                   <% end %>
                 </div>
               </td>
@@ -102,9 +102,16 @@
               </td>
               <td class="px-4 py-4 text-right">
                 <% if report %>
-                  <%= link_to report_path(report, sport: current_sport&.slug), class: "inline-block px-3 py-1 rounded-sm border border-primary/30 text-primary text-[9px] font-black uppercase hover:bg-primary hover:text-white transition-all" do %>
-                    <%= t('terminal.read_intel', default: 'READ_INTEL') %>
-                  <% end %>
+                  <div class="flex items-center justify-end gap-2">
+                    <% if report.free? %>
+                      <span class="text-[8px] font-black px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 uppercase">FREE</span>
+                    <% else %>
+                      <span class="text-[8px] font-black px-1.5 py-0.5 rounded bg-indigo-500/10 text-indigo-400 border border-indigo-500/30 uppercase">PRO</span>
+                    <% end %>
+                    <%= link_to report_path(report, sport: current_sport&.slug), class: "inline-block px-3 py-1 rounded-sm border border-primary/30 text-primary text-[9px] font-black uppercase hover:bg-primary hover:text-white transition-all" do %>
+                      <%= t('terminal.read_intel', default: 'READ_INTEL') %>
+                    <% end %>
+                  </div>
                 <% else %>
                   <span class="text-[9px] text-th-muted/30 font-bold uppercase tracking-widest italic"><%= t('terminal.queued', default: 'QUEUED') %></span>
                 <% end %>
