@@ -54,7 +54,7 @@
                 else 'solar:globus-bold-duotone'
               end
             %>
-            <%= link_to root_path(sport: sport.slug), class: "sidebar-item #{current_sport&.slug == sport.slug ? 'sidebar-item-active' : ''}" do %>
+            <%= link_to sport_home_path(sport: sport.slug), class: "sidebar-item #{current_sport&.slug == sport.slug ? 'sidebar-item-active' : ''}" do %>
               <iconify-icon icon="<%= icon_name %>" class="text-xl"></iconify-icon>
               <span class="text-xs font-bold uppercase"><%= sport.name %></span>
             <% end %>
