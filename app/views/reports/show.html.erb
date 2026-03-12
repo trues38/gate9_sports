@@ -59,7 +59,7 @@
           <% else %>
             <span class="px-2 py-0.5 rounded bg-indigo-600 text-white text-[9px] font-black uppercase tracking-widest">Premium Intelligence</span>
           <% end %>
-          <span class="text-[10px] font-bold text-slate-400 tabular-nums uppercase">Published: <%= @report.published_at&.strftime("%b %d, %Y | %H:%M") %></span>
+          <span class="text-[10px] font-bold text-slate-400 tabular-nums uppercase">Published: <%= @report.published_at&.in_time_zone("Asia/Seoul")&.strftime("%Y.%m.%d | %H:%M KST") %></span>
         </div>
         <h1 class="text-5xl font-extrabold text-[var(--text-main)] tracking-tighter leading-tight">
           <%= @report.game&.away_abbr %> @ <%= @report.game&.home_abbr %>

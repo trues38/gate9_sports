@@ -52,7 +52,7 @@
                 <% end %>
 
                 <span class="text-[9px] font-black px-1.5 py-0.5 rounded bg-primary/10 text-primary border border-primary/20 uppercase tracking-tighter italic"><%= t('terminal.analysis_ready', default: 'Analysis Ready') %></span>
-                <span class="text-[10px] text-th-muted font-bold"><%= report.published_at&.strftime("%Y.%m.%d") %></span>
+                <span class="text-[10px] text-th-muted font-bold"><%= report.published_at&.in_time_zone("Asia/Seoul")&.strftime("%Y.%m.%d %H:%M KST") %></span>
               </div>
               <div class="text-lg font-display font-black text-th-heading group-hover:text-primary transition uppercase truncate"><%= report.game&.display_name %></div>
               <% if report.free? || current_user&.can_access_premium? || session[:admin_authenticated] %>

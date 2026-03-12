@@ -97,7 +97,7 @@
               <% games.each do |game| %>
                 <tr class="hover:bg-black/5 dark:hover:bg-white/5 transition-colors group">
                   <td class="text-center tabular-nums py-5">
-                    <span class="text-xs font-bold text-slate-500 dark:text-slate-400 font-mono"><%= game.game_date.strftime("%H:%M") %></span>
+                    <span class="text-xs font-bold text-slate-500 dark:text-slate-400 font-mono"><%= game.game_date.in_time_zone("Asia/Seoul").strftime("%H:%M") %> <span class="text-[8px] text-slate-400">KST</span></span>
                   </td>
                   <td>
                     <div class="flex items-center gap-6">
@@ -120,7 +120,7 @@
                     <% if game.home_edge.present? %>
                       <span class="text-[11px] font-mono font-black text-terminal-green uppercase tracking-tighter"><%= t('terminal.analysis_ready', default: 'Ready') %></span>
                     <% else %>
-                      <span class="text-[10px] font-bold text-slate-300 dark:text-slate-800 tracking-widest uppercase"><%= t('terminal.pending', default: 'Pending') %></span>
+                      <span class="text-[10px] font-bold text-slate-400 dark:text-slate-500 tracking-widest uppercase"><%= t('terminal.pending', default: 'Pending') %></span>
                     <% end %>
                   </td>
                   <td class="text-right">
@@ -131,7 +131,7 @@
                         <iconify-icon icon="solar:alt-arrow-right-bold" class="text-sm"></iconify-icon>
                       <% end %>
                     <% else %>
-                      <div class="px-6 py-2.5 text-[10px] font-black text-slate-300 dark:text-slate-800 uppercase tracking-widest italic flex items-center justify-end gap-2">
+                      <div class="px-6 py-2.5 text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest italic flex items-center justify-end gap-2">
                         <div class="flex gap-1">
                           <div class="w-1 h-1 rounded-full bg-slate-700 animate-bounce" style="animation-delay: -0.3s"></div>
                           <div class="w-1 h-1 rounded-full bg-slate-700 animate-bounce" style="animation-delay: -0.15s"></div>
