@@ -1,9 +1,6 @@
 class ApplicationController < ActionController::Base
   include Authentication
 
-  allow_browser versions: :modern
-  stale_when_importmap_changes
-
   # 기본적으로 인증 불필요 (공개 페이지)
   allow_unauthenticated_access
 

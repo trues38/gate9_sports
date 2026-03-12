@@ -99,10 +99,10 @@
     }
 
     .terminal-container {
-        @apply bg-[#0d1117] border border-[#30363d] overflow-hidden shadow-2xl relative;
+        @apply bg-[var(--bg-card)] border border-[var(--th-border)] overflow-hidden shadow-2xl relative;
     }
     .terminal-header {
-        @apply flex items-center justify-between px-4 py-2 bg-[#161b22] border-b border-[#30363d] text-[10px] font-mono text-slate-400 uppercase tracking-widest font-black;
+        @apply flex items-center justify-between px-4 py-2 bg-black/5 dark:bg-white/5 border-b border-[var(--th-border)] text-[10px] font-mono text-[var(--th-muted)] uppercase tracking-widest font-black;
     }
     .glass-panel {
         @apply bg-[var(--bg-glass)] border border-[var(--border-subtle)] backdrop-blur-md shadow-xl;

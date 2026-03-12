@@ -20,7 +20,7 @@
   <div class="flex items-center gap-3 mb-8">
     <div class="w-1 h-8 bg-primary rounded-full"></div>
     <div>
-      <h1 class="text-2xl font-display font-bold text-white uppercase tracking-tight italic">PERFORMANCE RECORD</h1>
+      <h1 class="text-2xl font-display font-bold text-[var(--th-heading)] uppercase tracking-tight italic">PERFORMANCE RECORD</h1>
       <p class="text-xs text-slate-500 mt-0.5">투명한 실적 공개 — 검증된 데이터만 표시</p>
     </div>
   </div>
@@ -40,7 +40,7 @@
             &nbsp;–&nbsp; <%= @overall_stats[:pushes] %>P
           <% end %>
         </p>
-        <div class="mt-4 w-full bg-slate-800 rounded-full h-2">
+        <div class="mt-4 w-full bg-slate-200 dark:bg-slate-800 rounded-full h-2">
           <div class="bg-primary h-2 rounded-full transition-all duration-700"
                style="width: <%= [@overall_stats[:win_rate], 100].min %>%"></div>
         </div>
@@ -50,7 +50,7 @@
       <div class="md:col-span-2 grid grid-cols-2 gap-4">
         <div class="bg-[var(--bg-card)] border border-[var(--th-border)] rounded-xl p-6">
           <p class="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-2">총 픽 수</p>
-          <p class="text-3xl font-display font-black text-white"><%= @overall_stats[:total] %></p>
+          <p class="text-3xl font-display font-black text-[var(--th-heading)]"><%= @overall_stats[:total] %></p>
           <p class="text-xs text-slate-500 mt-1">결과 확인 완료</p>
         </div>
         <div class="bg-[var(--bg-card)] border border-[var(--th-border)] rounded-xl p-6">
@@ -82,7 +82,7 @@
       <div class="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-6">
         <iconify-icon icon="solar:chart-2-bold-duotone" class="text-3xl text-primary"></iconify-icon>
       </div>
-      <h2 class="text-xl font-display font-bold text-white mb-2">데이터 수집 중</h2>
+      <h2 class="text-xl font-display font-bold text-[var(--th-heading)] mb-2">데이터 수집 중</h2>
       <p class="text-sm text-slate-500">실적 데이터가 충분히 쌓이면 공개됩니다.</p>
     </div>
   <% end %>
@@ -96,7 +96,7 @@
 <div class="mb-10">
   <div class="flex items-center gap-2 mb-5">
     <iconify-icon icon="solar:layers-bold-duotone" class="text-xl text-primary"></iconify-icon>
-    <h2 class="text-sm font-black text-white uppercase tracking-widest">엣지 스코어별 적중률</h2>
+    <h2 class="text-sm font-black text-[var(--th-heading)] uppercase tracking-widest">엣지 스코어별 적중률</h2>
     <span class="ml-2 text-[9px] text-slate-500 font-mono">높은 엣지 = 높은 정확도</span>
   </div>
 
@@ -140,7 +140,7 @@
               <% end %>
               <span class="text-slate-600 ml-2">(<%= s[:total] %> total)</span>
             </div>
-            <div class="w-full bg-slate-800 rounded-full h-1.5">
+            <div class="w-full bg-slate-200 dark:bg-slate-800 rounded-full h-1.5">
               <div class="<%= s[:win_rate] >= 60 ? 'bg-emerald-500' : s[:win_rate] >= 50 ? 'bg-yellow-500' : 'bg-red-500' %> h-1.5 rounded-full"
                    style="width: <%= [s[:win_rate], 100].min %>%"></div>
             </div>
@@ -160,13 +160,13 @@
 <div class="mb-10">
   <div class="flex items-center gap-2 mb-5">
     <iconify-icon icon="solar:calendar-bold-duotone" class="text-xl text-primary"></iconify-icon>
-    <h2 class="text-sm font-black text-white uppercase tracking-widest">월별 실적</h2>
+    <h2 class="text-sm font-black text-[var(--th-heading)] uppercase tracking-widest">월별 실적</h2>
   </div>
 
   <div class="bg-[var(--bg-card)] border border-[var(--th-border)] rounded-xl overflow-hidden">
     <table class="w-full text-xs font-mono">
       <thead>
-        <tr class="border-b border-[var(--th-border)] bg-black/20">
+        <tr class="border-b border-[var(--th-border)] bg-black/5 dark:bg-black/20">
           <th class="text-left px-5 py-3 text-[9px] font-black text-slate-500 uppercase tracking-widest">월</th>
           <th class="text-center px-4 py-3 text-[9px] font-black text-slate-500 uppercase tracking-widest">총 픽</th>
           <th class="text-center px-4 py-3 text-[9px] font-black text-slate-500 uppercase tracking-widest">W</th>
@@ -186,7 +186,7 @@
             month_label = parsed_month ? parsed_month.strftime("%Y년 %-m월") : month_key
           %>
           <tr class="hover:bg-white/2 transition-colors">
-            <td class="px-5 py-3 text-slate-300 font-bold"><%= month_label %></td>
+            <td class="px-5 py-3 text-[var(--th-body)] font-bold"><%= month_label %></td>
             <td class="px-4 py-3 text-center text-slate-400"><%= s[:total] %></td>
             <td class="px-4 py-3 text-center text-emerald-400 font-bold"><%= s[:wins] %></td>
             <td class="px-4 py-3 text-center text-red-400 font-bold"><%= s[:losses] %></td>
@@ -212,7 +212,7 @@
 <div class="mb-10">
   <div class="flex items-center gap-2 mb-5">
     <iconify-icon icon="solar:history-bold-duotone" class="text-xl text-primary"></iconify-icon>
-    <h2 class="text-sm font-black text-white uppercase tracking-widest">최근 결과</h2>
+    <h2 class="text-sm font-black text-[var(--th-heading)] uppercase tracking-widest">최근 결과</h2>
     <span class="ml-2 text-[9px] text-slate-500 font-mono">최근 <%= @recent_results.size %>건</span>
   </div>
 
@@ -221,7 +221,7 @@
     <div class="hidden md:block overflow-x-auto">
       <table class="w-full text-xs font-mono">
         <thead>
-          <tr class="border-b border-[var(--th-border)] bg-black/20">
+          <tr class="border-b border-[var(--th-border)] bg-black/5 dark:bg-black/20">
             <th class="text-left px-5 py-3 text-[9px] font-black text-slate-500 uppercase tracking-widest">날짜</th>
             <th class="text-left px-5 py-3 text-[9px] font-black text-slate-500 uppercase tracking-widest">경기</th>
             <th class="text-left px-5 py-3 text-[9px] font-black text-slate-500 uppercase tracking-widest">픽</th>
@@ -254,7 +254,7 @@
               <td class="px-5 py-3 text-slate-500">
                 <%= report.published_at&.in_time_zone("Asia/Seoul")&.strftime("%m/%d") || "—" %>
               </td>
-              <td class="px-5 py-3 text-slate-300 truncate max-w-[160px]"><%= matchup %></td>
+              <td class="px-5 py-3 text-[var(--th-body)] truncate max-w-[160px]"><%= matchup %></td>
               <td class="px-5 py-3 text-slate-400 truncate max-w-[120px]"><%= pick_display.presence || "—" %></td>
               <td class="px-4 py-3 text-center <%= edge_cls %>">
                 <%= edge ? "#{edge}" : "—" %>
@@ -286,7 +286,7 @@
         %>
         <div class="px-4 py-3 flex items-center justify-between">
           <div class="flex-1 min-w-0">
-            <p class="text-xs font-bold text-slate-300 truncate"><%= matchup %></p>
+            <p class="text-xs font-bold text-[var(--th-body)] truncate"><%= matchup %></p>
             <p class="text-[10px] text-slate-500 mt-0.5">
               <%= report.published_at&.in_time_zone("Asia/Seoul")&.strftime("%m/%d") %>
               <% if edge.present? %>
@@ -313,7 +313,7 @@
 <!-- ═══════════════════════════════════════════════════ -->
 <!-- DISCLAIMER -->
 <!-- ═══════════════════════════════════════════════════ -->
-<div class="mt-8 p-6 bg-slate-900/50 border border-slate-800 rounded-xl">
+<div class="mt-8 p-6 bg-[var(--bg-card)] border border-[var(--th-border)] rounded-xl">
   <div class="flex items-start gap-3">
     <iconify-icon icon="solar:shield-warning-bold-duotone" class="text-xl text-slate-500 flex-shrink-0 mt-0.5"></iconify-icon>
     <div>

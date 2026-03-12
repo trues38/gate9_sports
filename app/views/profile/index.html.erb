@@ -4,13 +4,13 @@
   <div class="max-w-md mx-auto">
     <% if signed_in? %>
       <!-- User Profile Card -->
-      <div class="bg-gray-900/70 backdrop-blur-xl border border-gray-800 rounded-2xl p-6 mb-6">
+      <div class="bg-[var(--bg-card)] backdrop-blur-xl border border-[var(--th-border)] rounded-2xl p-6 mb-6">
         <div class="flex items-center gap-4">
           <div class="w-16 h-16 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-500/25">
             <span class="text-2xl font-bold text-white"><%= current_user.name&.first&.upcase || current_user.email.first.upcase %></span>
           </div>
           <div>
-            <p class="text-lg font-semibold text-white"><%= current_user.name || "회원" %></p>
+            <p class="text-lg font-semibold text-[var(--th-heading)]"><%= current_user.name || "회원" %></p>
             <p class="text-gray-400 text-sm"><%= current_user.email %></p>
             <% if current_user.admin? %>
               <span class="inline-flex items-center gap-1 mt-1 px-2 py-0.5 bg-purple-500/20 text-purple-400 text-xs rounded-full">
@@ -55,13 +55,13 @@
               </div>
               <div class="flex justify-between items-end">
                 <div>
-                  <p class="text-white text-2xl font-bold"><%= sub.plan_name %></p>
+                  <p class="text-[var(--th-heading)] text-2xl font-bold"><%= sub.plan_name %></p>
                   <p class="text-gray-400 text-sm mt-1">
                     만료: <%= sub.expires_at.in_time_zone("Asia/Seoul").strftime("%Y.%m.%d %H:%M") %>
                   </p>
                 </div>
                 <div class="text-right">
-                  <p class="text-3xl font-bold text-white"><%= sub.days_remaining %></p>
+                  <p class="text-3xl font-bold text-[var(--th-heading)]"><%= sub.days_remaining %></p>
                   <p class="text-gray-400 text-xs">일 남음</p>
                 </div>
               </div>
@@ -98,13 +98,13 @@
             </div>
           <% end %>
         <% else %>
-          <div class="bg-gray-900/70 border border-gray-800 rounded-2xl p-5">
+          <div class="bg-[var(--bg-card)] border border-[var(--th-border)] rounded-2xl p-5">
             <div class="flex items-center gap-3 mb-4">
-              <div class="w-12 h-12 bg-gray-800 rounded-xl flex items-center justify-center">
+              <div class="w-12 h-12 bg-[var(--bg-card)] rounded-xl flex items-center justify-center">
                 <iconify-icon icon="solar:crown-line-linear" width="24" class="text-gray-500"></iconify-icon>
               </div>
               <div>
-                <p class="text-gray-300 font-medium">무료 회원</p>
+                <p class="text-[var(--th-body)] font-medium">무료 회원</p>
                 <p class="text-gray-500 text-sm">프리미엄 리포트 잠김</p>
               </div>
             </div>
@@ -119,43 +119,43 @@
       <!-- Menu -->
       <div class="space-y-2">
         <% unless current_user.can_access_premium? %>
-          <%= link_to new_subscription_path, class: "flex items-center justify-between p-4 bg-gray-900/70 hover:bg-gray-800/70 border border-gray-800 hover:border-gray-700 rounded-xl transition-all duration-200 group" do %>
+          <%= link_to new_subscription_path, class: "flex items-center justify-between p-4 bg-[var(--bg-card)] hover:bg-[var(--bg-card)] border border-[var(--th-border)] hover:border-[var(--th-border)] rounded-xl transition-all duration-200 group" do %>
             <div class="flex items-center gap-3">
               <div class="w-10 h-10 bg-amber-500/20 rounded-lg flex items-center justify-center">
                 <iconify-icon icon="solar:crown-bold" class="text-amber-400" width="20"></iconify-icon>
               </div>
-              <span class="text-white font-medium">구독 플랜</span>
+              <span class="text-[var(--th-heading)] font-medium">구독 플랜</span>
             </div>
-            <iconify-icon icon="solar:arrow-right-linear" class="text-gray-500 group-hover:text-white group-hover:translate-x-1 transition-all" width="20"></iconify-icon>
+            <iconify-icon icon="solar:arrow-right-linear" class="text-[var(--th-muted)] group-hover:text-[var(--th-heading)] group-hover:translate-x-1 transition-all" width="20"></iconify-icon>
           <% end %>
         <% end %>
 
-        <%= link_to sign_out_path, data: { turbo_method: :delete }, class: "flex items-center justify-between p-4 bg-gray-900/70 hover:bg-red-500/10 border border-gray-800 hover:border-red-500/30 rounded-xl transition-all duration-200 group" do %>
+        <%= link_to sign_out_path, data: { turbo_method: :delete }, class: "flex items-center justify-between p-4 bg-[var(--bg-card)] hover:bg-red-500/10 border border-[var(--th-border)] hover:border-red-500/30 rounded-xl transition-all duration-200 group" do %>
           <div class="flex items-center gap-3">
             <div class="w-10 h-10 bg-red-500/20 rounded-lg flex items-center justify-center">
               <iconify-icon icon="solar:logout-2-bold" class="text-red-400" width="20"></iconify-icon>
             </div>
-            <span class="text-white group-hover:text-red-400 font-medium transition-colors">로그아웃</span>
+            <span class="text-[var(--th-heading)] group-hover:text-red-400 font-medium transition-colors">로그아웃</span>
           </div>
-          <iconify-icon icon="solar:arrow-right-linear" class="text-gray-500 group-hover:text-red-400 group-hover:translate-x-1 transition-all" width="20"></iconify-icon>
+          <iconify-icon icon="solar:arrow-right-linear" class="text-[var(--th-muted)] group-hover:text-red-400 group-hover:translate-x-1 transition-all" width="20"></iconify-icon>
         <% end %>
       </div>
 
     <% else %>
       <!-- Not signed in -->
       <div class="text-center py-12">
-        <div class="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gray-800 mb-6">
-          <iconify-icon icon="solar:user-circle-bold" class="text-gray-600" width="48"></iconify-icon>
+        <div class="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-[var(--bg-card)] mb-6">
+          <iconify-icon icon="solar:user-circle-bold" class="text-[var(--th-muted)]" width="48"></iconify-icon>
         </div>
-        <h3 class="text-xl font-semibold text-white mb-2">로그인이 필요합니다</h3>
-        <p class="text-gray-400 mb-8">프리미엄 리포트를 보려면 로그인하세요</p>
+        <h3 class="text-xl font-semibold text-[var(--th-heading)] mb-2">로그인이 필요합니다</h3>
+        <p class="text-[var(--th-muted)] mb-8">프리미엄 리포트를 보려면 로그인하세요</p>
 
         <div class="space-y-3 max-w-xs mx-auto">
           <%= link_to sign_in_path, class: "flex items-center justify-center gap-2 w-full py-3.5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-semibold rounded-xl shadow-lg shadow-indigo-500/25 transition-all duration-200" do %>
             <iconify-icon icon="solar:login-3-bold" width="20"></iconify-icon>
             로그인
           <% end %>
-          <%= link_to sign_up_path, class: "flex items-center justify-center gap-2 w-full py-3.5 bg-gray-800 hover:bg-gray-700 border border-gray-700 text-white font-semibold rounded-xl transition-all duration-200" do %>
+          <%= link_to sign_up_path, class: "flex items-center justify-center gap-2 w-full py-3.5 bg-[var(--bg-card)] hover:opacity-80 border border-[var(--th-border)] text-[var(--th-heading)] font-semibold rounded-xl transition-all duration-200" do %>
             <iconify-icon icon="solar:user-plus-bold" width="20"></iconify-icon>
             회원가입
           <% end %>
