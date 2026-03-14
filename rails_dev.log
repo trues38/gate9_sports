@@ -1,0 +1,15 @@
+11:22:59 web.1  | started with pid 30649
+11:22:59 css.1  | started with pid 30650
+11:23:00 web.1  | => Booting Puma
+11:23:00 web.1  | => Rails 8.1.2 application starting in development 
+11:23:00 web.1  | => Run `bin/rails server --help` for more startup options
+11:23:00 web.1  | A server is already running (pid: 11858, file: /Users/js/Documents/project/gate9_sports_all/web/tmp/pids/server.pid).
+11:23:00 web.1  | Exiting
+11:23:01 web.1  | exited with code 1
+11:23:01 system | sending SIGTERM to all processes
+11:23:01 css.1  | bin/rails aborted!
+11:23:01 css.1  | SignalException: SIGTERM (SignalException)
+11:23:01 css.1  | 
+11:23:01 css.1  | Tasks: TOP => tailwindcss:watch
+11:23:01 css.1  | (See full trace by running task with --trace)
+11:23:01 css.1  | exited with code 1
