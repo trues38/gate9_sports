@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_03_09_135506) do
+ActiveRecord::Schema[8.1].define(version: 2026_03_11_000000) do
   create_table "analyst_picks", force: :cascade do |t|
     t.string "analyst_name", null: false
     t.string "confidence"
@@ -131,13 +131,17 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_09_135506) do
     t.string "category"
     t.text "content"
     t.datetime "created_at", null: false
+    t.string "meta_description"
     t.datetime "published_at"
+    t.integer "report_id"
     t.integer "sport_id", null: false
     t.string "status"
     t.string "tags"
     t.string "title"
     t.datetime "updated_at", null: false
     t.index ["published_at"], name: "index_insights_on_published_at"
+    t.index ["report_id"], name: "index_insights_on_report_id"
+    t.index ["report_id"], name: "index_insights_on_report_id_unique", unique: true, where: "report_id IS NOT NULL"
     t.index ["sport_id", "status"], name: "index_insights_on_sport_id_and_status"
     t.index ["sport_id"], name: "index_insights_on_sport_id"
     t.index ["status"], name: "index_insights_on_status"

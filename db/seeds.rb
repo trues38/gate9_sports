@@ -20,9 +20,11 @@ soccer = Sport.find_or_create_by!(slug: "soccer") do |s|
   s.position = 3
 end
 
-# Sample Games
+# Sample Games with Leagues
 game1 = Game.find_or_create_by!(external_id: "nba_20260115_atl_lal") do |g|
   g.sport = basketball
+  g.league = "nba"
+  g.league_name = "National Basketball Association"
   g.home_team = "Los Angeles Lakers"
   g.away_team = "Atlanta Hawks"
   g.home_abbr = "LAL"
@@ -32,14 +34,29 @@ game1 = Game.find_or_create_by!(external_id: "nba_20260115_atl_lal") do |g|
   g.status = "scheduled"
 end
 
-game2 = Game.find_or_create_by!(external_id: "nba_20260115_den_no") do |g|
+game2 = Game.find_or_create_by!(external_id: "kbl_20260115_sk_db") do |g|
   g.sport = basketball
-  g.home_team = "New Orleans Pelicans"
-  g.away_team = "Denver Nuggets"
-  g.home_abbr = "NO"
-  g.away_abbr = "DEN"
-  g.game_date = Time.current.beginning_of_day + 11.hours
-  g.venue = "Smoothie King Center"
+  g.league = "kbl"
+  g.league_name = "Korean Basketball League"
+  g.home_team = "Seoul SK Knights"
+  g.away_team = "Wonju DB Promy"
+  g.home_abbr = "SK"
+  g.away_abbr = "DB"
+  g.game_date = Time.current.beginning_of_day + 19.hours
+  g.venue = "Jamsil Student Gymnasium"
+  g.status = "scheduled"
+end
+
+game3 = Game.find_or_create_by!(external_id: "epl_20260115_mci_ars") do |g|
+  g.sport = soccer
+  g.league = "epl"
+  g.league_name = "Premier League"
+  g.home_team = "Arsenal"
+  g.away_team = "Manchester City"
+  g.home_abbr = "ARS"
+  g.away_abbr = "MCI"
+  g.game_date = Time.current.beginning_of_day + 23.hours
+  g.venue = "Emirates Stadium"
   g.status = "scheduled"
 end
 

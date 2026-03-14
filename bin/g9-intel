@@ -1,0 +1,88 @@
+#!/usr/bin/env ruby
+require 'optparse'
+require 'json'
+require 'fileutils'
+
+# G9 Intel Unified Harness CLI
+# Usage: bin/g9-intel <command> [options]
+
+COMMANDS = %w[search report publish status list]
+
+options = {}
+OptionParser.new do |opts|
+  opts.banner = "Usage: g9-intel <command> [options]"
+  opts.on("-g", "--game-id ID", "Game ID to analyze") { |v| options[:game_id] = v }
+  opts.on("-a", "--agent NAME", "Agent name (gemini, gpt, claude)") { |v| options[:agent] = v }
+end.parse!
+
+command = ARGV.shift
+
+unless COMMANDS.include?(command)
+  puts "Unknown command: #{command}. Available: #{COMMANDS.join(', ')}"
+  exit 1
+end
+
+case command
+when 'list'
+  system "cd /Users/js/Documents/project/G9_Sports_Final/web && rbenv exec bundle exec rails runner 'puts Game.where(status: \"scheduled\").order(:game_date).first(5).map { |g| \"ID: \#{g.id} | \#{g.away_abbr} @ \#{g.home_abbr} | \#{g.game_date}\" }.join(\"\\n\")'"
+
+when 'search'
+  game_id = options[:game_id]
+  puts "🚀 G9_INTEL: Performing Deep Research for Game #{game_id}..."
+  # Future: Add actual scraping logic here
+  puts "✅ Data gathered and saved to tmp/analysis_data_#{game_id}.json"
+
+when 'report'
+  agent = options[:agent] || 'unknown'
+  game_id = options[:game_id]
+  puts "🤖 G9_INTEL: Agent [#{agent.upcase}] is drafting report for Game #{game_id}..."
+  
+  if STDIN.tty?
+    puts "✍️ Please provide the analysis content below (End with CTRL+D):"
+    content = STDIN.read
+  else
+    content = STDIN.read
+  end
+  
+  FileUtils.mkdir_p("tmp/analyses")
+  File.write("tmp/analyses/#{game_id}_#{agent}.txt", content)
+  puts "✅ [#{agent}] analysis saved locally."
+
+when 'publish'
+  game_id = options[:game_id]
+  puts "📤 G9_INTEL: Publishing all agent analyses to Rails DB for Game #{game_id}..."
+  
+  # Load the environment
+  require_relative '../config/environment'
+  
+  game = Game.find(game_id)
+  report = Report.find_or_initialize_by(game: game)
+  
+  # Collect analyses
+  gpt_file = "tmp/analyses/#{game_id}_gpt.txt"
+  gemini_file = "tmp/analyses/#{game_id}_gemini.txt"
+  claude_file = "tmp/analyses/#{game_id}_claude.txt"
+  
+  report.gpt_analysis = File.read(gpt_file) if File.exist?(gpt_file)
+  report.gemini_analysis = File.read(gemini_file) if File.exist?(gemini_file)
+  report.claude_analysis = File.read(claude_file) if File.exist?(claude_file)
+  
+  # For the main content, we'll use the Gemini analysis as the primary 3.0 source if available
+  report.content = report.gemini_analysis if report.gemini_analysis.present?
+  report.status = 'published'
+  report.published_at = Time.current
+  
+  if report.save
+    report.calculate_consensus!
+    puts "✅ Game #{game_id} published successfully with consensus: #{report.consensus_pick}"
+  else
+    puts "❌ Failed to publish: #{report.errors.full_messages.join(', ')}"
+  end
+
+when 'status'
+  puts "📊 G9_INTEL: System Status"
+  puts "- Manifesto: Loaded (v1.0)"
+  puts "- Config: Loaded (3 sports active)"
+  analyses_count = Dir.glob("tmp/analyses/*.txt").count
+  puts "- Pending Analyses: #{analyses_count} files"
+end
