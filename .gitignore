@@ -42,3 +42,5 @@
 node_modules/
 .omc/
 .DS_Store
+node_modules/
+.omc/
