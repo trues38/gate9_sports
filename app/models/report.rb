@@ -1,17 +1,23 @@
 class Report < ApplicationRecord
-  belongs_to :game
+  belongs_to :game, optional: true
   has_many :analyst_picks, dependent: :destroy
 
   validates :content, presence: true
 
   RESULTS = %w[pending win loss push].freeze
   PICK_TYPES = %w[spread total moneyline].freeze
+  REPORT_TYPES = %w[game_analysis daily_schedule results_summary].freeze
 
   scope :published, -> { where(status: "published").order(published_at: :desc) }
   scope :draft, -> { where(status: "draft") }
   scope :recent, -> { order(created_at: :desc) }
   scope :free_reports, -> { where(free: true) }
   scope :premium_reports, -> { where(free: false) }
+
+  # Report type scopes
+  scope :game_analyses, -> { where(report_type: "game_analysis") }
+  scope :daily_schedules, -> { where(report_type: "daily_schedule") }
+  scope :results_summaries, -> { where(report_type: "results_summary") }
 
   # Result tracking scopes
   scope :with_result, -> { where.not(result: [nil, "pending"]) }
@@ -20,7 +26,7 @@ class Report < ApplicationRecord
   scope :losses, -> { where(result: "loss") }
   scope :pushes, -> { where(result: "push") }
 
-  delegate :sport, to: :game
+  delegate :sport, to: :game, allow_nil: true
 
   # structured_data 표준 포맷:
   # {
@@ -139,6 +145,23 @@ class Report < ApplicationRecord
 
   def confidence_stars
     confidence || "---"
+  end
+
+  def report_type_label
+    case report_type
+    when "game_analysis" then "경기 분석"
+    when "daily_schedule" then "일정 종합"
+    when "results_summary" then "결과 종합"
+    else report_type
+    end
+  end
+
+  def display_title
+    if game.present?
+      title.presence || game.display_name
+    else
+      title.presence || report_type_label
+    end
   end
 
   private

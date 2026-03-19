@@ -55,17 +55,21 @@ module ApplicationHelper
     @lineups_cache[team_abbr] || []
   end
 
-  # Returns: :upcoming or :finished (no live tracking)
   def game_status(game)
-    # DB status가 있으면 우선
     return :finished if game.status&.downcase == "finished"
+    return :finished if game.home_score.present? && game.away_score.present?
 
-    # 시간 기반 판단 (경기 시작 + 3시간 후 = 종료로 간주)
     now = Time.current.in_time_zone("Asia/Seoul")
     game_time = game.game_date.in_time_zone("Asia/Seoul")
     game_end_estimate = game_time + 3.hours
 
-    now >= game_end_estimate ? :finished : :upcoming
+    if now >= game_end_estimate
+      :finished
+    elsif now >= game_time
+      :live
+    else
+      :upcoming
+    end
   end
 
   private

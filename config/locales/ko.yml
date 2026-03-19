@@ -60,6 +60,7 @@ ko:
     intel_level: "신뢰도"
     final: "종료"
     live: "진행중"
+    upcoming: "예정"
     read_intel: "리포트 읽기"
     queued: "분석 예약됨"
     no_data: "데이터 없음"

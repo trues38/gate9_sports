@@ -16,6 +16,10 @@ class Game < ApplicationRecord
     "#{away_abbr || away_team} @ #{home_abbr || home_team}"
   end
 
+  def display_name_ko
+    "#{away_team} vs #{home_team}"
+  end
+
   def short_date
     game_date&.strftime("%m/%d %H:%M")
   end

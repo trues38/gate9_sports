@@ -65,10 +65,13 @@
           <% @games.each do |game| %>
             <tr class="data-row transition-colors">
               <td class="px-4 py-4">
-                <% if game.status == 'finished' %>
-                  <span class="text-[9px] font-black px-1.5 py-0.5 rounded bg-white/5 text-th-muted border border-white/10 uppercase"><%= t('terminal.final', default: 'FINAL') %></span>
+                <% status = game_status(game) %>
+                <% if status == :finished %>
+                  <span class="text-[9px] font-black px-1.5 py-0.5 rounded bg-white/5 text-th-muted border border-white/10 uppercase"><%= t('terminal.final') %></span>
+                <% elsif status == :live %>
+                  <span class="text-[9px] font-black px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 uppercase animate-pulse"><%= t('terminal.live') %></span>
                 <% else %>
-                  <span class="text-[9px] font-black px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 uppercase animate-pulse"><%= t('terminal.live', default: 'LIVE') %></span>
+                  <span class="text-[9px] font-black px-1.5 py-0.5 rounded bg-sky-500/10 text-sky-400 border border-sky-500/20 uppercase"><%= t('terminal.upcoming', default: '예정') %></span>
                 <% end %>
               </td>
               <td class="px-4 py-4 text-center">
